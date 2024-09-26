@@ -23,22 +23,21 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
 
     private void Awake()
     {
-        if (FindObjectOfType<Image>().name == "State BackGround Box")
+        if (!stateImage && FindObjectOfType<Image>().name == "State BackGround Box")
         {
             stateImage = FindObjectOfType<Image>();
-            stateImage.gameObject.SetActive(false);
         }
+        stateImage.gameObject.SetActive(false);
 
-        if (FindObjectOfType<Image>().name == "Turn BackGround Box")
+        if (!turnImage && FindObjectOfType<Image>().name == "Turn BackGround Box")
         {
             turnImage = FindObjectOfType<Image>();
-            turnImage.gameObject.SetActive(false);
-
-            // 버튼 생성 및 할당
-            CreateTurnImageButtons();
         }
+        // 버튼 이벤트 할당
+        CreateTurnImageButtons();
+        turnImage.gameObject.SetActive(false);
 
-        if (FindObjectOfType<Tilemap>().name == "BackGround")
+        if (!tilemap && FindObjectOfType<Tilemap>().name == "BackGround")
         {
             tilemap = FindObjectOfType<Tilemap>();
         }
@@ -135,52 +134,10 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
 
     private void CreateTurnImageButtons()
     {
-        // 버튼을 UI에 생성하고 부모를 turnImage로 설정
-        attackButton = CreateButton("Attack", new Vector2(0, 100));
-        waitButton = CreateButton("Wait", new Vector2(0, 50));
-        itemButton = CreateButton("Item", new Vector2(0, 0));
-        skillButton = CreateButton("Skill", new Vector2(0, -50));
-
         // 버튼 이벤트 추가 (여기선 간단하게 Debug.Log로 예시)
         attackButton.onClick.AddListener(() => Debug.Log("Attack"));
         waitButton.onClick.AddListener(() => Debug.Log("Wait"));
         itemButton.onClick.AddListener(() => Debug.Log("Item"));
         skillButton.onClick.AddListener(() => Debug.Log("Skill"));
-    }
-
-    private Button CreateButton(string buttonText, Vector2 anchoredPosition)
-    {
-        // 버튼 생성
-        GameObject buttonObj = new GameObject(buttonText);
-        buttonObj.transform.SetParent(turnImage.transform, false);
-
-        // 버튼 컴포넌트 추가
-        Button button = buttonObj.AddComponent<Button>();
-        RectTransform rectTransform = buttonObj.AddComponent<RectTransform>();
-
-        // 버튼 사이즈 키우기 (300x100)
-        rectTransform.sizeDelta = new Vector2(300, 100);
-        rectTransform.anchoredPosition = anchoredPosition; // 버튼 위치 설정
-
-        // ColorBlock을 설정하여 눌리는 효과 추가
-        ColorBlock colors = button.colors;
-        colors.normalColor = Color.white;  // 기본 상태
-        colors.highlightedColor = Color.yellow;  // 강조 상태 (마우스 오버 시)
-        colors.pressedColor = Color.red;  // 눌렸을 때 색상
-        colors.selectedColor = Color.green;  // 선택되었을 때 색상 (임의로 설정)
-        colors.disabledColor = Color.gray;  // 비활성화 상태
-        colors.colorMultiplier = 1f;  // 색상 강화 계수 (일반적으로 1f로 유지)
-        button.colors = colors;
-
-        // 텍스트 생성
-        GameObject textObj = new GameObject("Text");
-        textObj.transform.SetParent(buttonObj.transform, false);
-        Text text = textObj.AddComponent<Text>();
-        text.text = buttonText;
-        text.alignment = TextAnchor.MiddleCenter;
-        text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");  // 기본 폰트 설정
-        text.color = Color.black;
-
-        return button;
     }
 }
