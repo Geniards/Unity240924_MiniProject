@@ -9,9 +9,10 @@ using UnityEngine.UI;
 public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("상태창")]
-    [SerializeField] private Image stateImage;
+    [SerializeField] private Image statusImage;
     [SerializeField] private Image turnImage;
     [SerializeField] private Tilemap tilemap;
+    [SerializeField] private Text statusText;
 
     // 공격, 대기, 아이템, 스킬 버튼 변수 선언
     [Header("버튼 세팅")]
@@ -23,33 +24,65 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
 
     private void Awake()
     {
-        if (!stateImage && FindObjectOfType<Image>().name == "State BackGround Box")
+        if (!statusImage || !turnImage)
         {
-            stateImage = FindObjectOfType<Image>();
-        }
-        stateImage.gameObject.SetActive(false);
+            Image[] images = FindObjectsOfType<Image>();
 
-        if (!turnImage && FindObjectOfType<Image>().name == "Turn BackGround Box")
-        {
-            turnImage = FindObjectOfType<Image>();
+            if(!statusImage)
+                statusImage = FindObjectByName(images, "Status BackGround Box") as Image;
+
+            if(!turnImage)
+                turnImage = FindObjectByName(images, "Turn BackGround Box") as Image;
         }
+
+        if (!statusText)
+        {
+            Text[] texts = FindObjectsOfType<Text>();
+            statusText = FindObjectByName(texts, "Status Text") as Text;
+        }
+
+        if (!tilemap)
+        {
+            Tilemap[] tilemaps = FindObjectsOfType<Tilemap>();
+            tilemap = FindObjectByName(tilemaps, "BackGround") as Tilemap;
+        }
+
+        // 이미지 비활성화
+        if (statusImage)
+        {
+            statusImage.gameObject.SetActive(false);
+        }
+
+        if (turnImage)
+        {
+            turnImage.gameObject.SetActive(false);
+        }
+
         // 버튼 이벤트 할당
         CreateTurnImageButtons();
-        turnImage.gameObject.SetActive(false);
+    }
 
-        if (!tilemap && FindObjectOfType<Tilemap>().name == "BackGround")
+    private Component FindObjectByName<T>(T[] objects, string name) where T : Component
+    {
+        foreach (var obj in objects)
         {
-            tilemap = FindObjectOfType<Tilemap>();
+            if (obj.name == name)
+            {
+                return obj; // 원하는 객체를 찾으면 반환
+            }
         }
+        return null; // 찾지 못하면 null 반환
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
         Debug.Log($"eventData : {eventData.position}");
         Debug.Log($"mousePosion : {Input.mousePosition}");
-        stateImage.gameObject.SetActive(false);
+        statusImage.gameObject.SetActive(false);
 
-        // Turn Image를 클릭하지 않은 다른 곳을 클릭하면 Turn Image를 끔
+        MovablePath(eventData.position);
+
+        //Turn Image를 클릭하지 않은 다른 곳을 클릭하면 Turn Image를 끔
         if (turnImage.gameObject.activeSelf)
         {
             if (!RectTransformUtility.RectangleContainsScreenPoint(turnImage.rectTransform, eventData.position))
@@ -68,13 +101,14 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
         Debug.Log($"mouseEnter the Pos");
 
         // 상태창 띄우기(4분할로 나누어서 위치변경)
-        StatusLocation(eventData.position, stateImage);
+        if(!turnImage.gameObject.activeSelf)
+            StatusLocation(eventData.position, statusImage);
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
         Debug.Log($"mouseExit the Pos");
-        stateImage.gameObject.SetActive(false);
+        statusImage.gameObject.SetActive(false);
     }
 
     private void StatusLocation(Vector2 cursorPos, Image uiImage)
@@ -82,6 +116,9 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
         // 커서 위치를 월드 좌표로 변환
         Vector3 worldCursorPosition = Camera.main.ScreenToWorldPoint(cursorPos);
         worldCursorPosition.z = 0;
+
+        // 유닛의 상태 업데이트
+        SetUnitStatus(worldCursorPosition);
 
         // world좌표 -> cell좌표(타일 좌표로 전환)
         Vector3Int tilePostion = tilemap.WorldToCell(worldCursorPosition);
@@ -132,6 +169,26 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
         return offset;  
     }
 
+    private void SetUnitStatus(Vector3 worldCursorPosition)
+    {
+        Collider2D hitCollider = Physics2D.OverlapPoint(worldCursorPosition);
+
+        if(hitCollider)
+        {
+            Unit unit = hitCollider.GetComponent<Unit>();
+            
+            if(unit)
+            {
+                UpdateStaus(unit);
+            }
+        }
+    }
+
+    private void UpdateStaus(Unit unit)
+    {
+        statusText.text = unit.GetStatusName();
+    }
+
     private void CreateTurnImageButtons()
     {
         // 버튼 이벤트 추가 (여기선 간단하게 Debug.Log로 예시)
@@ -139,5 +196,27 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
         waitButton.onClick.AddListener(() => Debug.Log("Wait"));
         itemButton.onClick.AddListener(() => Debug.Log("Item"));
         skillButton.onClick.AddListener(() => Debug.Log("Skill"));
+    }
+
+    private void MovablePath(Vector2 cursorPos)
+    {
+        Vector3 worldCursorPosition = Camera.main.ScreenToWorldPoint(cursorPos);
+        worldCursorPosition.z = 0;
+
+        Vector3Int tilePostion = tilemap.WorldToCell(worldCursorPosition);
+
+        Debug.Log(tilePostion);
+
+        Collider2D hitCollider = Physics2D.OverlapPoint(worldCursorPosition);
+
+        if (hitCollider)
+        {
+            Unit unit = hitCollider.GetComponent<Unit>();
+
+            if (unit)
+            {
+                unit.PathSearch(tilePostion);
+            }
+        }
     }
 }
