@@ -32,7 +32,7 @@ public class CameraInput : MonoBehaviour
         cam = Camera.main;
 
         // 타일맵의 크기에 따른 경계를 이용해 카메라의 이동 범위를 설정
-        if(FindObjectOfType<Tilemap>().name  == "BackGround")
+        if(!tilemap && FindObjectOfType<Tilemap>().name  == "BackGround")
             tilemap = FindObjectOfType<Tilemap>();
         
         BoundsInt bounds = tilemap.cellBounds;
