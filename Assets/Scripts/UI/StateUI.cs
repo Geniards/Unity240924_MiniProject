@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Tilemaps;
 using UnityEngine.UI;
+using static UnityEngine.UI.CanvasScaler;
 
 public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
 {
@@ -82,18 +83,18 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
 
         MovablePath(eventData.position);
 
-        //Turn Image를 클릭하지 않은 다른 곳을 클릭하면 Turn Image를 끔
-        if (turnImage.gameObject.activeSelf)
-        {
-            if (!RectTransformUtility.RectangleContainsScreenPoint(turnImage.rectTransform, eventData.position))
-            {
-                turnImage.gameObject.SetActive(false);
-            }
-        }
-        else if (!turnImage.gameObject.activeSelf)
-        {
-            StatusLocation(eventData.position, turnImage);
-        }
+        ////Turn Image를 클릭하지 않은 다른 곳을 클릭하면 Turn Image를 끔
+        //if (turnImage.gameObject.activeSelf)
+        //{
+        //    if (!RectTransformUtility.RectangleContainsScreenPoint(turnImage.rectTransform, eventData.position))
+        //    {
+        //        turnImage.gameObject.SetActive(false);
+        //    }
+        //}
+        //else if (!turnImage.gameObject.activeSelf)
+        //{
+        //    StatusLocation(eventData.position, turnImage);
+        //}
     }
 
     public void OnPointerEnter(PointerEventData eventData)
@@ -200,14 +201,16 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
 
     private void MovablePath(Vector2 cursorPos)
     {
+        // 커서 위치를 월드 좌표로 변환
         Vector3 worldCursorPosition = Camera.main.ScreenToWorldPoint(cursorPos);
         worldCursorPosition.z = 0;
 
-        Vector3Int tilePostion = tilemap.WorldToCell(worldCursorPosition);
-
-        Debug.Log(tilePostion);
 
         Collider2D hitCollider = Physics2D.OverlapPoint(worldCursorPosition);
+        Debug.Log($" hitCollider {hitCollider.name}");
+
+        // world좌표 -> cell좌표(타일 좌표로 전환)
+        Vector3Int tilePostion = tilemap.WorldToCell(worldCursorPosition);
 
         if (hitCollider)
         {
@@ -215,8 +218,15 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
 
             if (unit)
             {
+                Debug.Log($" unit {unit}");
                 unit.PathSearch(tilePostion);
             }
         }
+    }
+
+    public void StartTurn()
+    {
+        // 턴 시작 시 필요한 로직 추가
+        Debug.Log($"{name}의 턴입니다.");
     }
 }
