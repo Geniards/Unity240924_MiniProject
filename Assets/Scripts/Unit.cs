@@ -1,9 +1,12 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 public class Unit : MonoBehaviour
 {
@@ -19,6 +22,9 @@ public class Unit : MonoBehaviour
     [SerializeField] private int moveRange;
     [SerializeField] private int actionPoint;
 
+    // 이동완료 후 행동창 드는 이벤트
+    public event Action OnMoveComplete;
+
     [Header("이동범위 세팅")]
     [SerializeField] private Tilemap tilemap;
     [SerializeField] private Tilemap obstacleTilemap;
@@ -30,6 +36,12 @@ public class Unit : MonoBehaviour
     //private Dictionary<Vector3Int, TileBase> originalTiles = new Dictionary<Vector3Int, TileBase>(); // 원래 타일 저장
 
     private bool isMoveRangeDisplayed = false;
+
+    // A* Setting
+    [Header("A* Setting")]
+    [SerializeField] private PathFinder pathFinder;
+    private bool isMoving = false;
+
 
     private void Awake()
     {
@@ -45,6 +57,8 @@ public class Unit : MonoBehaviour
         // 문서화
 
         // 코루틴 몬스터 한턴한턴 움직임 가능
+
+        pathFinder = GetComponent<PathFinder>(); // PathFinder 컴포넌트를 가져옴
     }
 
     public string GetStatusName()
@@ -195,6 +209,52 @@ public class Unit : MonoBehaviour
         visitedTiles.Clear();    // 방문한 타일 기록 초기화
     }
 
+    // A* 알고리즘으로 이동
+    public void MoveTo(Vector3Int targetPos)
+    {
+        if (validMoveTiles.Contains(targetPos) && !isMoving)
+        {
+            List<Vector2> path = null;
+            Vector2Int start = new Vector2Int((int)transform.position.x, (int)transform.position.y);
+            Vector2Int end = new Vector2Int(targetPos.x, targetPos.y);
+
+            // A* 경로 탐색
+            if (pathFinder.AStar(start, end, out path))
+            {
+                StartCoroutine(MoveAlongPath(path));
+            }
+            else
+            {
+                Debug.Log($"실패");
+            }
+        }
+    }
+
+    // 유닛을 A* 경로를 따라 이동
+    private IEnumerator MoveAlongPath(List<Vector2> path)
+    {
+        isMoving = true;
+
+        foreach (Vector3 point in path)
+        {
+            Vector3 targetPos = new Vector3(point.x, point.y, 0);
+
+            while (Vector3.Distance(transform.position, targetPos) > 0.1f)
+            {
+                transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * 3f);
+                yield return null;
+            }
+        }
+
+        // 이동이 끝나면 이벤트 발생
+        isMoving = false;
+        ClearMoveRange();
+        OnMoveComplete?.Invoke();  // 이동 완료 후 이벤트 호출
+    }
+
+    public List<Vector3Int> GetvalidMoveTiles() { return validMoveTiles; }
+
+    // ActionPoint 사용여부 (TurnManager에서 사용)
     public void ResetActionPoint() { actionPoint = 1; }
 
     public int GetActionPoint() { return actionPoint; }
