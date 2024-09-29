@@ -8,7 +8,17 @@ public class TurnManager : MonoBehaviour
     public List<EnemyUnit> enemyUnits; // 적군 유닛 리스트
 
     public enum TurnState { PlayerTurn, EnemyTurn, TURNSTATE_MAX }
+
+    public static TurnManager instance;
     public TurnState currentTurn;
+    public List<>
+
+
+
+    private void Awake()
+    {
+        instance = this;
+    }
 
     void Start()
     {
