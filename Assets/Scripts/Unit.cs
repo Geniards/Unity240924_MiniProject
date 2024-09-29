@@ -82,48 +82,6 @@ public class Unit : MonoBehaviour
         }
     }
 
-    private void DFS(Vector3Int currentPos, int remainingMoveRange)
-    {
-        // 남은거리가 0 or 방문했으면 종료
-        if (remainingMoveRange <= 0 || visitedTiles.Contains(currentPos)) return;
-
-        visitedTiles.Add(currentPos);   // 현재 타일을 방문으로
-        validMoveTiles.Add(currentPos); // 이동가능한 타일로 추가
-        Debug.Log($"validMoveTiles {currentPos}");
-
-        // 현재 타일 정보를 저장
-        //if (!originalTiles.ContainsKey(currentPos))
-        //{
-        //    originalTiles[currentPos] = tilemap.GetTile(currentPos);
-        //}
-
-        // 다음 타일을 상하 좌우로 탐색을 준비한다.
-        // 네 방향 탐색 (상, 하, 좌, 우)
-        Vector3Int[] directions = new Vector3Int[]
-        {
-            new Vector3Int(+1, 0, 0), 
-            new Vector3Int(-1, 0, 0),
-            new Vector3Int(0, +1, 0), 
-            new Vector3Int(0, -1, 0) 
-        };
-
-        foreach (var direction in directions)
-        {
-            Vector3Int nextPos = currentPos + direction;
-
-            // nextPos가 유효한 위치인지 파악
-            if(tilemap.HasTile(nextPos))
-            {
-                int tileCost = GetTileCost(nextPos);
-                if (remainingMoveRange - tileCost >= 0)
-                {
-                    DFS(nextPos, remainingMoveRange - tileCost);
-                }
-
-            }
-        }
-    }
-
     private void BFS(Vector3Int startPos, int maxMoveRange)
     {
         Queue<(Vector3Int, int)> queue = new Queue<(Vector3Int, int)>();

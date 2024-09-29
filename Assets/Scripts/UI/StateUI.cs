@@ -8,8 +8,10 @@ using UnityEngine.Tilemaps;
 using UnityEngine.UI;
 using static UnityEngine.UI.CanvasScaler;
 
-public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
+public class StateUI : MonoBehaviour
 {
+    public static StateUI Instance;
+
     [Header("상태창")]
     [SerializeField] private Image statusImage;
     [SerializeField] private Image turnImage;
@@ -32,6 +34,8 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
 
     private void Awake()
     {
+        Instance = this;
+
         if (!statusImage || !turnImage)
         {
             Image[] images = FindObjectsOfType<Image>();
@@ -84,20 +88,16 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
         return null; // 찾지 못하면 null 반환
     }
 
-    private void Update()
+    public void OnPointerEnterWithUnit(Character character, PointerEventData eventData)
     {
-        if (isMoveTargeting)
+        // 상태창 띄우기(캐릭터 상태를 기반으로)
+        if (!statusImage.gameObject.activeSelf)
         {
-            if (Input.GetMouseButtonDown(0))
-                Move(Input.mousePosition);
-        }
+            StatusLocation(eventData.position, statusImage);
+            statusImage.gameObject.SetActive(true);
 
-        if (turnImage.gameObject.activeSelf && Input.GetMouseButtonDown(1))
-        {
-            if (!RectTransformUtility.RectangleContainsScreenPoint(turnImage.rectTransform, Input.mousePosition))
-            {
-                turnImage.gameObject.SetActive(false);
-            }
+            // 캐릭터 상태 업데이트
+            UpdateStatus(character);
         }
     }
 
@@ -193,14 +193,15 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
 
             if (unit)
             {
-                UpdateStaus(unit);
+                //UpdateStaus(unit);
             }
         }
     }
 
-    private void UpdateStaus(Unit unit)
+    private void UpdateStatus(Character character)
     {
-        statusText.text = unit.GetStatusName();
+        // 상태창 텍스트 갱신
+        statusText.text = $"{character.name}\nHP: {character.stat.Hp}\nATK: {character.stat.ATK}\nDEF: {character.stat.DEF}";
     }
 
     private void CreateTurnImageButtons()
@@ -232,9 +233,9 @@ public class StateUI : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
             Unit newSelectedUnit = hitCollider.GetComponent<Unit>();
 
             // 이전에 선택한 유닛이 있었다면 구독 해제
-            if (selectedUnit)
+            //if (selectedUnit)
             {
-                selectedUnit.OnMoveComplete -= ShowTurnImage;
+                //selectedUnit.OnMoveComplete -= ShowTurnImage;
             }
 
             selectedUnit = newSelectedUnit;
