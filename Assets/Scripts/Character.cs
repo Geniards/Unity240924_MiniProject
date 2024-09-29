@@ -2,8 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.Tilemaps;
 
-public enum CharaterSide { Alliance, Enemy, CHARATERSIDE_MAX }
+public enum CharaterTeam { ALLIANCE, ENEMY, CHARATERTEAM_MAX }
 
 [Serializable]
 public class Status
@@ -41,7 +43,7 @@ public class Character : MonoBehaviour
     {
         if(moveableArea.Contains(tile))
         {
-            prevMoveTile.Insert(0, tile);
+            prevMoveTile.Clear();
             while(tile)
             {
                 prevMoveTile.Insert(0, tile);
@@ -227,7 +229,90 @@ public class Character : MonoBehaviour
         return path;
     }
 
+    // A*를 이용해서 구현
+    public Tile GetNearestTile(Tile moveStart, List<Tile> candidateTiles, int movDistance)
+    {
+        Debug.Log("GetNearestTile 시작");
+        List<Tile> openList = new List<Tile>();
+        HashSet<Tile> closeList = new HashSet<Tile>();
 
+        // 시작 지점 설정
+        moveStart.tileInfo.SetAStarCosts(0, 0);
+        openList.Add(moveStart);
+
+        // 반환 타일(목적지)
+        Tile nearestPath = null;
+
+        while(openList.Count > 0)
+        {
+            // FCost가 낮은것 선택
+            Tile currentTile = openList[0];
+            foreach (Tile tile in openList)
+            {
+                if (tile.tileInfo.fCost < currentTile.tileInfo.fCost)
+                {
+                    currentTile = tile;
+                }
+            }
+
+            // 방문한 타일은 삭제 및 추가
+            openList.Remove(currentTile);
+            closeList.Add(currentTile);
+
+            // 이동 가능한 타일만 반환
+            if (candidateTiles.Contains(currentTile) && currentTile != moveStart)
+            {
+                nearestPath = currentTile;
+                break;
+            }
+
+            // 상하좌우 방향으로 이동
+            Vector2Int[] directions =
+            {
+                Vector2Int.up,
+                Vector2Int.down,
+                Vector2Int.left,
+                Vector2Int.right
+            };
+
+            foreach (Vector2Int direction in directions)
+            {
+                Tile neighbor = Map.Instance.GetTile(currentTile.tileInfo.coord + direction);
+
+                // 근접 타일이 아니거나 중복된 타일인 경우 배제
+                if (!neighbor || closeList.Contains(neighbor)) continue;
+
+                // 타일이동에 따른 GCost 새로 계산
+                int newGCost = currentTile.tileInfo.gCost + 1;
+
+                // 이동력보다 낮고
+                // openList에 포함되어 있고
+                // 또는 근접 타일보다 총합이 낮을때
+                if(newGCost <= movDistance && 
+                  (!openList.Contains(neighbor) || 
+                    newGCost < neighbor.tileInfo.gCost))
+                {
+                    neighbor.tileInfo.gCost = newGCost;
+
+                    // 여기선 목표 타일이 아닌 시작 타일과의 거리 사용
+                    neighbor.tileInfo.hCost = GetHeuristicCost(neighbor, moveStart);
+                    neighbor.tileInfo.prev = currentTile.tileInfo;
+
+                    if(!openList.Contains(neighbor))
+                        openList.Add(neighbor);
+                }
+
+            }
+        }
+
+        return nearestPath;
+    }
+
+    // 턴제 느낌을 살리기 위해서 맨해튼 거리를 사용
+    private int GetHeuristicCost(Tile neighbor, Tile moveStart)
+    {
+        return Mathf.Abs(neighbor.tileInfo.coord.x - moveStart.tileInfo.coord.x) + Mathf.Abs(neighbor.tileInfo.coord.y - moveStart.tileInfo.coord.y);
+    }
 }
 
 

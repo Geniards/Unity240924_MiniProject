@@ -4,68 +4,68 @@ using UnityEngine;
 
 public class TurnManager : MonoBehaviour
 {
-    public List<PlayerUnit> playerUnits; // 아군 유닛 리스트
-    public List<EnemyUnit> enemyUnits; // 적군 유닛 리스트
-
-    public enum TurnState { PlayerTurn, EnemyTurn, TURNSTATE_MAX }
+    public enum TurnState { PLAYERTURN, ENEMYTURN, TURNSTATE_MAX }
 
     public static TurnManager instance;
     public TurnState currentTurn;
-    public List<>
 
+    public List<PlayerUnit> playerUnits; // 아군 유닛 리스트
+    public List<EnemyUnit> enemyUnits; // 적군 유닛 리스트
 
+    // 테스트용.
+    [SerializeField] private GameObject testButton;
 
     private void Awake()
     {
         instance = this;
+        Initialize();
     }
 
-    void Start()
+    private void Initialize()
     {
-        StartPlayerTurn();
+        playerUnits = new List<PlayerUnit>();
+        enemyUnits = new List<EnemyUnit>();
     }
 
-    // 아군 턴 시작
-    void StartPlayerTurn()
+    private void Start()
     {
-        currentTurn = TurnState.PlayerTurn;
+        currentTurn = TurnState.PLAYERTURN;
+        testButton.SetActive(true);
 
-        // 모든 아군 유닛의 행동 포인트를 초기화
-        foreach (var unit in playerUnits)
+        Debug.Log("플레이어 턴");
+    }
+
+    // 턴 종료 버튼 클릭 시 호출되는 메서드
+    public void EndTurn()
+    {
+        if (currentTurn == TurnState.PLAYERTURN)
         {
-            unit.ResetActionPoint();
+            StartCoroutine(StartEnemyTurn());
         }
-
-        Debug.Log("플레이어 턴 시작");
-    }
-
-    public void OnPlayerUnitActed()
-    {
-        if (AllPlayerUnitsActed())
-        {
-            StartEnemyTurn();
-        }
-    }
-
-    bool AllPlayerUnitsActed()
-    {
-        foreach (var unit in playerUnits)
-        {
-            // 행동 포인트가 남은 유닛이 있으면 false
-            if (unit.GetActionPoint() > 0) 
-            {
-                return false;
-            }
-        }
-        return true;
     }
 
     // 적군 턴 시작
-    void StartEnemyTurn()
+    private IEnumerator StartEnemyTurn()
     {
-        currentTurn = TurnState.EnemyTurn;
-        Debug.Log("적군 턴 시작");
+        testButton.SetActive(false);
+        currentTurn = TurnState.ENEMYTURN;
+        Debug.Log("적군 턴");
 
-        // AI 행동 (코루틴으로 진행 예정)
+        for (int i = 0; i < enemyUnits.Count; i++)
+        {
+            EnemyUnit enemyUnit = enemyUnits[i];
+            enemyUnit.StartAI();
+
+            // 움직이는 중이라면 한프레임 쉬고 동작
+            while(enemyUnit.GetIsMoving())
+            {
+                yield return null;
+            }
+        }
+
+        currentTurn = TurnState.PLAYERTURN;
+        Debug.Log("플레이어 턴");
+
+        testButton.SetActive(true);
     }
 }

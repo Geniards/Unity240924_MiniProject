@@ -33,10 +33,14 @@ public class Tile : MonoBehaviour
 
     public void SetCharacter(Character ch)
     {
+        if(!ch)
+            Debug.Log("Character is null!");
+
         character = ch;
         hasCharcter = true;
         tileInfo.tileState = TileState.UNIT;
         ch.currentStand = this;
+
     }
 
     public void ReleaseCharacter()

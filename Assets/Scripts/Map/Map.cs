@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class Map : MonoBehaviour
 {
@@ -8,10 +9,17 @@ public class Map : MonoBehaviour
     private Dictionary<Vector2Int, Tile> tiles = new Dictionary<Vector2Int, Tile>();
     public Tile currentFocus;   //현재 타일에 대한 정보를 저장하는 용도
 
+    [Header("맵 세팅")]
     [SerializeField] private Tile tilePrefab;
     [SerializeField] private int numColumns = 24;
     [SerializeField] private int numRows = 24;
     [SerializeField] private Character character;
+
+    [Header("유닛 세팅")]
+    [SerializeField] private PlayerUnit playerPrefab;
+    [SerializeField] private EnemyUnit enemyPrefab;
+    [SerializeField] private List<Vector2Int> playerStartPositions;
+    [SerializeField] private List<Vector2Int> enemyStartPositions;
 
     private void Awake()
     {
@@ -40,8 +48,11 @@ public class Map : MonoBehaviour
             }
         }
 
-        tiles[new Vector2Int(3, 3)].SetCharacter(character);
-        character.transform.position = tiles[new Vector2Int(3, 3)].transform.position;
+        PlaceUnits();
+
+
+        //tiles[new Vector2Int(3, 3)].SetCharacter(character);
+        //character.transform.position = tiles[new Vector2Int(3, 3)].transform.position;
     }
 
     public void ClearTile()
@@ -66,6 +77,49 @@ public class Map : MonoBehaviour
         tile.SetTileInfo(info);
 
         return tile;
+    }
+
+    // 유닛 배치 메서드
+    private void PlaceUnits()
+    {
+        Debug.Log("PlaceUnits 호출");
+
+        // 플레이어 유닛 배치
+        foreach (var position in playerStartPositions)
+        {
+            Debug.Log($"Placing player unit at {position}");
+            Tile tile = GetTile(position);
+            if (tile != null && tile.tileInfo.tileState == TileState.EMPTY)
+            {
+                PlayerUnit playerUnit = Instantiate(playerPrefab);
+                playerUnit.transform.position = tile.transform.position;
+                tile.SetCharacter(playerUnit);
+                TurnManager.instance.playerUnits.Add(playerUnit.GetComponent<PlayerUnit>()); // 플레이어 유닛 추가
+            }
+            else
+            {
+                Debug.Log($"Tile not found or not empty for player at {position}");
+            }
+
+        }
+
+        // 적군 유닛 배치
+        foreach (var position in enemyStartPositions)
+        {
+            Debug.Log($"Placing enemy unit at {position}");
+            Tile tile = GetTile(position);
+            if (tile != null && tile.tileInfo.tileState == TileState.EMPTY)
+            {
+                EnemyUnit enemyUnit = Instantiate(enemyPrefab);
+                enemyUnit.transform.position = tile.transform.position;
+                tile.SetCharacter(enemyUnit);
+                TurnManager.instance.enemyUnits.Add(enemyUnit.GetComponent<EnemyUnit>()); // 적군 유닛 추가
+            }
+            else
+            {
+                Debug.Log($"Tile not found or not empty for enemy at {position}");
+            }
+        }
     }
 
     // 선택한 타일의 로직 처리
@@ -111,4 +165,15 @@ public class Map : MonoBehaviour
         a = b;
         b = temp;
     }
+
+    public int GetDistance(Tile a, Tile b)
+    {
+        return Mathf.Abs(a.tileInfo.coord.x - b.tileInfo.coord.x) + Mathf.Abs(a.tileInfo.coord.y - b.tileInfo.coord.y)
+    }
+
+    public bool isNearTarget(Tile current, Tile target)
+    {
+        return GetDistance(current, target) == 1;
+    }
+
 }
