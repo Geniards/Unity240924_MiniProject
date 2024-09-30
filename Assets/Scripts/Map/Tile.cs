@@ -1,136 +1,82 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.TextCore.Text;
 
 public class Tile : MonoBehaviour
 {
-    [SerializeField] private Color selectColor;
-    [SerializeField] private EventTrigger trigger;
+    public Vector2Int coordinates;    // 타일의 좌표
+    public bool hasUnit;              // 유닛이 있는지 여부
+    public GameObject currentUnit;    // 현재 타일에 있는 유닛
+    public Tile parentTile;           // 경로 탐색을 위한 부모 타일
+    public Tile previousTile;         // 이전에 방문한 타일
+    public TileState tileState;       // 타일의 상태 (이동 가능/불가 등)
+    public int costFromStart;         // 시작 타일부터의 이동 비용
 
-    
-    public Tile Parent;
-    public TileInfo tileInfo;
-    public Character character { get; private set; }
-    public bool hasCharcter;
-    public SpriteRenderer tileRenderer;
-
-    private bool isClicking;
-
-    public void SetSelected()
+    public enum TileState
     {
-        tileRenderer.material.color = selectColor;
+        Normal,
+        Blocked,        // 이동 불가 상태
+        Selected,       // 선택된 상태
+        Path,           // 경로의 일부
+        Attackable      // 공격 가능한 범위에 있는 타일
     }
 
-    public void ReleaseSelected()
+    public void Init(Vector2Int coords)
     {
-        tileRenderer.material.color = new Color(1, 1, 1, 0);
+        coordinates = coords;
+        hasUnit = false;
+        currentUnit = null;
+        parentTile = null;
+        previousTile = null;
+        tileState = TileState.Normal;
+        costFromStart = 0;
     }
 
-    public void SetTileInfo(TileInfo infoTile)
+    public void PlaceUnit(GameObject unit)
     {
-        tileInfo = infoTile;
+        hasUnit = true;
+        currentUnit = unit;
     }
 
-    public void SetCharacter(Character ch)
+    public void RemoveUnit()
     {
-        if(!ch)
-            Debug.Log("Character is null!");
-
-        character = ch;
-        hasCharcter = true;
-        tileInfo.tileState = TileState.UNIT;
-        ch.currentStand = this;
-
+        hasUnit = false;
+        currentUnit = null;
     }
 
-    public void ReleaseCharacter()
+    public void UpdateTileState(TileState newState)
     {
-        character = null;
-        hasCharcter = false;
-        tileInfo.tileState = TileState.EMPTY;
-
+        tileState = newState;
+        UpdateTileVisual();
     }
 
-    public void SetSearchInfo(TileInfo infoTile)
+    private void UpdateTileVisual()
     {
-        tileInfo.SetSearchInfo(infoTile);
-    }
-
-    public void ClearSearch()
-    {
-        tileInfo.ClearSearchInfo();
-    }
-
-    public void ClickTile(PointerEventData data)
-    {
-        Map.Instance.CheckSelectTile(this);
-        isClicking = true;
-    }
-
-    // 마우스를 타일 위에 가져갔을 때
-    public void EnterTile(PointerEventData data)
-    {
-        if (isClicking) return;
-
-        if (hasCharcter && character)
+        switch (tileState)
         {
-            // 캐릭터 상태창 활성화 (상태를 갱신하고 화면에 표시)
-            StateUI.Instance.OnPointerEnterWithUnit(character, data);
+            case TileState.Normal:
+                GetComponent<SpriteRenderer>().color = Color.white;
+                break;
+            case TileState.Blocked:
+                GetComponent<SpriteRenderer>().color = Color.gray;
+                break;
+            case TileState.Selected:
+                GetComponent<SpriteRenderer>().color = Color.green;
+                break;
+            case TileState.Path:
+                GetComponent<SpriteRenderer>().color = Color.blue;
+                break;
+            case TileState.Attackable:
+                GetComponent<SpriteRenderer>().color = Color.red;
+                break;
         }
     }
 
-    // 마우스를 타일 밖으로 나갔을 때
-    public void ExitTile(PointerEventData data)
+    // 마우스 클릭 시 발생하는 이벤트
+    private void OnMouseDown()
     {
-        // 상태창 닫기
-        StateUI.Instance.OnPointerExit(data);
-    }
-
-    // 이동 완료 후 호출하는 메서드
-    public void MoveComplete()
-    {
-        isClicking = false;
-        // 이동 후 상태창 닫기 등 추가 작업 가능
-    }
-
-    private void Awake()
-    {
-        if (!tileRenderer)
+        if (GameManager.Instance.SelectedUnit != null)
         {
-            tileRenderer = GetComponent<SpriteRenderer>();
+            // 유닛이 선택된 상태에서 타일을 클릭한 경우 처리
+            GameManager.Instance.OnTileClicked(this);
         }
     }
-
-    private void Start()
-    {
-        if (!trigger)
-            trigger = GetComponent<EventTrigger>();
-
-        if (!trigger)
-        {
-            trigger = gameObject.AddComponent<EventTrigger>();
-        }
-
-        // 마우스 클릭 이벤트 추가
-        EventTrigger.Entry entryClicker = new EventTrigger.Entry();
-        entryClicker.eventID = EventTriggerType.PointerClick;
-        entryClicker.callback.AddListener((data) => ClickTile((PointerEventData)data));
-        trigger.triggers.Add(entryClicker);
-
-        // 마우스 오버 이벤트 추가
-        EventTrigger.Entry entryMouseEnter = new EventTrigger.Entry();
-        entryMouseEnter.eventID = EventTriggerType.PointerEnter;
-        entryMouseEnter.callback.AddListener((data) => EnterTile((PointerEventData)data));
-        trigger.triggers.Add(entryMouseEnter);
-
-        // 마우스 나가기 이벤트 추가
-        EventTrigger.Entry entryMouseExit = new EventTrigger.Entry();
-        entryMouseExit.eventID = EventTriggerType.PointerExit;
-        entryMouseExit.callback.AddListener((data) => ExitTile((PointerEventData)data));
-        trigger.triggers.Add(entryMouseExit);
-
-        selectColor = tileRenderer.material.color;
-        ReleaseSelected();
-    }
-
 }

@@ -1,220 +1,189 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Drawing;
-using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
-using UnityEngine.Tilemaps;
-using UnityEngine.UI;
-using UnityEngine.UIElements;
+
+public enum Team{ Ally,Enemy, TEAM_MAX }
+
+[System.Serializable]
+public class UnitStats
+{
+    public string unitName; 
+    public int attackPower; 
+    public int defensePower;
+    public int moveRange;   
+    public int mana;        
+}
 
 public class Unit : MonoBehaviour
 {
-    [Header("Unit Setting")]
-    [SerializeField] private string name;
-    [SerializeField] private string className;
-    
-    [SerializeField] private int level;
+    // 유닛 스탯을 별도의 클래스로 관리
+    public UnitStats stats;      // 유닛의 스탯 정보
+    public Team team;            // 유닛이 속한 팀 (enum)
 
-    [SerializeField] private int Hp;
-    [SerializeField] private int maxHp;
+    // 유닛 상태 관리
+    public Tile currentTile;     // 유닛이 현재 위치한 타일
+    private bool isMoving = false; // 유닛이 이동 중인지 여부
 
-    [SerializeField] private int moveRange;
-    [SerializeField] private int actionPoint;
+    // 컴포넌트
+    private Animator animator;
+    private SpriteRenderer spriteRenderer;
 
-    // 이동완료 후 행동창 드는 이벤트
-    public event Action OnMoveComplete;
-
-    [Header("이동범위 세팅")]
-    [SerializeField] private Tilemap tilemap;
-    [SerializeField] private Tilemap obstacleTilemap;
-    [SerializeField] private Tilemap moveRangeTilemap;
-    [SerializeField] private TileBase moveRangeTile;    // 이동가능한 타일을 표시
-
-    private HashSet<Vector3Int> visitedTiles = new HashSet<Vector3Int>(); // 방문한 타일 기록
-    private List<Vector3Int> validMoveTiles = new List<Vector3Int>(); // 이동 가능한 타일 리스트
-    //private Dictionary<Vector3Int, TileBase> originalTiles = new Dictionary<Vector3Int, TileBase>(); // 원래 타일 저장
-
-    private bool isMoveRangeDisplayed = false;
-
-    // A* Setting
-    [Header("A* Setting")]
-    [SerializeField] private PathFinder pathFinder;
-    private bool isMoving = false;
-
-
-    private void Awake()
+    private void Start()
     {
-        name = "조조";
-        className = "군웅";
-        level = 1;
-        maxHp = 100;
-        Hp = maxHp;
-        moveRange = 4;
-        actionPoint = 1;
+        // 애니메이터와 스프라이트 렌더러 초기화
+        animator = GetComponent<Animator>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
 
-        // 이동가능범위 : 너비 우선탐색
-        // 문서화
-
-        // 코루틴 몬스터 한턴한턴 움직임 가능
-
-        pathFinder = GetComponent<PathFinder>(); // PathFinder 컴포넌트를 가져옴
+        // 기본 애니메이션 설정 (왼쪽 이동)
+        animator.Play("Move_Left");
     }
 
-    public string GetStatusName()
+    // 유닛을 타일로 이동시키는 메서드
+    public void MoveToTile(Tile targetTile)
     {
-        return $"{name}\n{className}\t\t\t\t\tLV : {level}";
-    }
-
-    public void PathSearch(Vector3Int selectUnitPos)
-    {
-        if (isMoveRangeDisplayed)
+        if (!isMoving)
         {
-            ClearMoveRange();
-            isMoveRangeDisplayed = false;
-        }
-        else
-        {
-            //DFS(selectUnitPos, moveRange);
-            BFS(selectUnitPos, moveRange);
-            HighlightMoveRange();
-            isMoveRangeDisplayed = true;
+            StartCoroutine(MoveRoutine(targetTile));
         }
     }
 
-    private void BFS(Vector3Int startPos, int maxMoveRange)
-    {
-        Queue<(Vector3Int, int)> queue = new Queue<(Vector3Int, int)>();
-        queue.Enqueue((startPos, maxMoveRange)); // 시작 위치와 남은 이동 범위 추가
-        visitedTiles.Add(startPos);
-        validMoveTiles.Add(startPos);
-
-        // 네 방향 탐색 (상, 하, 좌, 우)
-        Vector3Int[] directions = new Vector3Int[]
-        {
-        new Vector3Int(+1, 0, 0),
-        new Vector3Int(-1, 0, 0),
-        new Vector3Int(0, +1, 0),
-        new Vector3Int(0, -1, 0)
-        };
-
-        while (queue.Count > 0)
-        {
-            var (currentPos, remainingMoveRange) = queue.Dequeue();
-
-            if (remainingMoveRange <= 0) continue;
-
-            foreach (var direction in directions)
-            {
-                Vector3Int nextPos = currentPos + direction;
-
-                if (tilemap.HasTile(nextPos) && !visitedTiles.Contains(nextPos))
-                {
-                    int tileCost = GetTileCost(nextPos);
-
-                    // 장애물인 경우 탐색 X
-                    if (tileCost == int.MaxValue) continue; 
-
-                    if (remainingMoveRange - tileCost >= 0)
-                    {
-                        visitedTiles.Add(nextPos);
-                        validMoveTiles.Add(nextPos);
-
-                        queue.Enqueue((nextPos, remainingMoveRange - tileCost));
-                    }
-                }
-            }
-        }
-    }
-
-    // 타일에 따른 비용계산
-    private int GetTileCost(Vector3Int tilePos)
-    {
-        TileBase tile = tilemap.GetTile(tilePos);
-        TileBase obstacleTile = obstacleTilemap.GetTile(tilePos);
-
-        if (obstacleTile)
-        {
-            return int.MaxValue; // 장애물인 경우 비용을 무한으로 설정
-        }
-
-        if (tile && (tile.name.Contains("Mountain") || tile.name.Contains("River")))
-        {
-            return 2;
-        }
-
-        return 1;
-    }
-
-    // 이동 가능한 타일을 시각적으로 표시
-    private void HighlightMoveRange()
-    {
-        foreach (var tilePos in validMoveTiles)
-        {
-            moveRangeTilemap.SetTile(tilePos, moveRangeTile);
-        }
-    }
-
-    // 이동 범위를 초기화, 타일을 원래대로 되돌림
-    private void ClearMoveRange()
-    {
-        foreach (var tilePos in validMoveTiles)
-        {
-            moveRangeTilemap.SetTile(tilePos, null);
-        }
-
-        validMoveTiles.Clear();  // 이동 가능한 타일 목록 초기화
-        visitedTiles.Clear();    // 방문한 타일 기록 초기화
-    }
-
-    // A* 알고리즘으로 이동
-    public void MoveTo(Vector3Int targetPos)
-    {
-        if (validMoveTiles.Contains(targetPos) && !isMoving)
-        {
-            List<Vector2> path = null;
-            Vector2Int start = new Vector2Int((int)transform.position.x, (int)transform.position.y);
-            Vector2Int end = new Vector2Int(targetPos.x, targetPos.y);
-
-            // A* 경로 탐색
-            if (pathFinder.AStar(start, end, out path))
-            {
-                StartCoroutine(MoveAlongPath(path));
-            }
-            else
-            {
-                Debug.Log($"실패");
-            }
-        }
-    }
-
-    // 유닛을 A* 경로를 따라 이동
-    private IEnumerator MoveAlongPath(List<Vector2> path)
+    // 이동 코루틴 (애니메이션 포함)
+    private IEnumerator MoveRoutine(Tile targetTile)
     {
         isMoving = true;
 
-        foreach (Vector3 point in path)
-        {
-            Vector3 targetPos = new Vector3(point.x, point.y, 0);
+        // 현재 타일에서 유닛 제거
+        currentTile.RemoveUnit();
 
-            while (Vector3.Distance(transform.position, targetPos) > 0.1f)
-            {
-                transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * 3f);
-                yield return null;
-            }
+        Vector3 startPosition = transform.position;
+        Vector3 targetPosition = new Vector3(targetTile.coordinates.x, targetTile.coordinates.y, 0);
+
+        // 이동 방향에 따른 애니메이션 설정
+        SetMoveAnimation(targetPosition - startPosition);
+
+        float elapsedTime = 0;
+        while (elapsedTime < 1f)
+        {
+            transform.position = Vector3.Lerp(startPosition, targetPosition, elapsedTime);
+            elapsedTime += Time.deltaTime * stats.moveRange; // 이동 속도는 유닛의 이동력에 따라 결정
+            yield return null;
         }
 
-        // 이동이 끝나면 이벤트 발생
+        // 이동 완료 후 위치 고정
+        transform.position = targetPosition;
+        targetTile.PlaceUnit(this.gameObject);
+        currentTile = targetTile;
+
+        // 이동 완료 후 기본 애니메이션(왼쪽 이동)으로 복귀
+        animator.Play("Move_Left");
+
         isMoving = false;
-        ClearMoveRange();
-        OnMoveComplete?.Invoke();  // 이동 완료 후 이벤트 호출
     }
 
-    public List<Vector3Int> GetvalidMoveTiles() { return validMoveTiles; }
+    // 이동 방향에 따라 애니메이션을 전환하는 메서드
+    private void SetMoveAnimation(Vector3 direction)
+    {
+        // 좌우 이동 처리 (오른쪽은 Flip으로 처리)
+        if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y))
+        {
+            if (direction.x > 0)
+            {
+                // 오른쪽으로 이동 (Flip 사용)
+                spriteRenderer.flipX = true;
+                animator.Play("Move_Left"); // 왼쪽 애니메이션을 Flip
+            }
+            else
+            {
+                // 왼쪽으로 이동
+                spriteRenderer.flipX = false;
+                animator.Play("Move_Left");
+            }
+        }
+        // 상하 이동 처리
+        else
+        {
+            if (direction.y > 0)
+            {
+                animator.Play("Move_Up");
+            }
+            else
+            {
+                animator.Play("Move_Down");
+            }
+        }
+    }
 
-    // ActionPoint 사용여부 (TurnManager에서 사용)
-    public void ResetActionPoint() { actionPoint = 1; }
+    // 공격 처리
+    public void Attack(Unit target)
+    {
+        StartCoroutine(AttackRoutine(target));
+    }
 
-    public int GetActionPoint() { return actionPoint; }
+    // 공격 코루틴
+    private IEnumerator AttackRoutine(Unit target)
+    {
+        // 공격 방향에 따라 애니메이션 전환
+        Vector3 direction = target.transform.position - transform.position;
+        SetAttackAnimation(direction);
 
+        yield return new WaitForSeconds(0.5f); // 공격 애니메이션 대기 시간
+
+        // 타겟에게 데미지 적용
+        int damage = Mathf.Max(0, stats.attackPower - target.stats.defensePower); // 방어력 계산 후 데미지 적용
+        target.TakeDamage(damage);
+
+        // 공격 후 기본 상태로 복귀
+        animator.Play("Move_Left");
+    }
+
+    // 공격 방향에 따라 애니메이션을 전환하는 메서드
+    private void SetAttackAnimation(Vector3 direction)
+    {
+        // 좌우 공격 처리 (오른쪽은 Flip으로 처리)
+        if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y))
+        {
+            if (direction.x > 0)
+            {
+                // 오른쪽으로 공격 (Flip 사용)
+                spriteRenderer.flipX = true;
+                animator.Play("Atk_Left");
+            }
+            else
+            {
+                // 왼쪽으로 공격
+                spriteRenderer.flipX = false;
+                animator.Play("Atk_Left");
+            }
+        }
+        // 상하 공격 처리
+        else
+        {
+            if (direction.y > 0)
+            {
+                animator.Play("Atk_Up");
+            }
+            else
+            {
+                animator.Play("Atk_Down");
+            }
+        }
+    }
+
+    // 데미지를 입었을 때 처리
+    public void TakeDamage(int damage)
+    {
+        stats.mana -= damage;  // 체력 대신 마나로 대체한 예시
+
+        if (stats.mana <= 0)
+        {
+            Die();
+        }
+    }
+
+    // 사망 처리
+    private void Die()
+    {
+        // 사망 처리 로직
+        Destroy(gameObject);  // 유닛 제거
+    }
 }

@@ -124,6 +124,7 @@ MonoBehaviour:
     ATK: 0
     DEF: 0
     MOV: 4
+    Team: 1
   currentStand: {fileID: 0}
   prevMoveTile: []
   isMoving: 0

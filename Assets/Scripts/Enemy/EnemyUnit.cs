@@ -1,36 +1,26 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+//using System.Collections;
+//using System.Collections.Generic;
+//using UnityEngine;
 
-public class EnemyUnit : Character
-{
-    [SerializeField] private bool isMoving;
+//public class EnemyUnit : Character
+//{
+//    public bool isMoving { get { return moveCoroutine != null; } }
 
-    public bool GetIsMoving() { return moveCoroutine != null; }
-    public void StartAI()
-    {
-        StopCurrentMove();
-        moveCoroutine = StartCoroutine(aiRoute());
-    }
+//    public void StartAI()
+//    {
+//        StopCurrentMove();
+//        moveCoroutine = StartCoroutine(aiRoute());
+//    }
 
-    private IEnumerator aiRoute()
-    {
-        currentStand.ClickTile(null);
-        yield return new WaitForSeconds(1f);
-        var target = GetNearestTile(currentStand, moveableArea, stat.MOV);
-        Debug.Log($"target {target} ");
+//    private IEnumerator aiRoute()
+//    {
+//        currentStand.ClickTile(null);
+//        yield return new WaitForSeconds(1f);
+//        var target = Map.Instance.GetNearestTile(currentStand, moveableArea, stat.MOV);
+//        target.ClickTile(null);
 
-        if (target)
-        {
-            target.ClickTile(null);
-        }
-        else
-        {
-            Debug.Log("Å¸°Ù¾øÀ½");
-        }
+//        while (isMoving)
+//            yield return null;
+//    }
 
-        while (isMoving)
-            yield return null;
-    }
-
-}
+//}
