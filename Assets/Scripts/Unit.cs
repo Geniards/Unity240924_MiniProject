@@ -1,6 +1,8 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 public enum Team{ Ally,Enemy, TEAM_MAX }
 
@@ -32,54 +34,76 @@ public class Unit : MonoBehaviour
     private Animator animator;
     private SpriteRenderer spriteRenderer;
 
+    [SerializeField] private float moveSpeed = 2f;
+
     private void Start()
     {
-        // 애니메이터와 스프라이트 렌더러 초기화
         animator = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
 
-        // 기본 애니메이션 설정 (왼쪽 이동)
         animator.Play("Move_Left");
     }
 
-    // 유닛을 타일로 이동시키는 메서드
-    public void MoveToTile(Tile targetTile)
+    //public void OnUnitSelected()
+    //{
+    //     유닛이 선택되었을 때 이동 가능 범위를 탐지
+    //    List<Tile> reachableTiles = GridManager.Instance.FindReachableTiles(currentTile, stats.moveRange);
+
+    //     탐지된 타일을 하이라이트
+    //    foreach (var tile in reachableTiles)
+    //    {
+    //        tile.UpdateTileState(Tile.TileState.Selected);
+    //    }
+    //}
+
+    //// 유닛을 타일로 이동시키는 메서드
+    //public void MoveToTile(Tile targetTile)
+    //{
+    //    if (!isMoving)
+    //    {
+    //        List<Tile> path = GridManager.Instance.FindPath(currentTile, targetTile);
+    //        if(path != null)
+    //            StartCoroutine(MoveAlongPath(path));
+    //    }
+    //}
+
+    public void MoveAlongPath(List<Tile> path)
     {
         if (!isMoving)
         {
-            StartCoroutine(MoveRoutine(targetTile));
+            StartCoroutine(MoveAlongPathCoroutine(path));
         }
     }
 
     // 이동 코루틴 (애니메이션 포함)
-    private IEnumerator MoveRoutine(Tile targetTile)
+    private IEnumerator MoveAlongPathCoroutine(List<Tile> path)
     {
         isMoving = true;
 
-        // 현재 타일에서 유닛 제거
-        currentTile.RemoveUnit();
-
-        Vector3 startPosition = transform.position;
-        Vector3 targetPosition = new Vector3(targetTile.coordinates.x, targetTile.coordinates.y, 0);
-
-        // 이동 방향에 따른 애니메이션 설정
-        SetMoveAnimation(targetPosition - startPosition);
-
-        float elapsedTime = 0;
-        while (elapsedTime < 1f)
+        foreach (Tile tile in path)
         {
-            transform.position = Vector3.Lerp(startPosition, targetPosition, elapsedTime);
-            elapsedTime += Time.deltaTime * stats.moveRange; // 이동 속도는 유닛의 이동력에 따라 결정
-            yield return null;
+            Vector3 startPosition = transform.position;
+            Vector3 targetPosition = new Vector3(tile.coordinates.x + 0.5f, tile.coordinates.y + 0.5f, 0);
+
+            // 애니메이션 설정
+            SetMoveAnimation(targetPosition - startPosition);
+
+            float elapsedTime = 0f;
+            float journeyLength = Vector3.Distance(startPosition, targetPosition);
+
+            while (elapsedTime < journeyLength / moveSpeed)
+            {
+                transform.position = Vector3.Lerp(startPosition, targetPosition, (elapsedTime * moveSpeed) / journeyLength);
+                elapsedTime += Time.deltaTime;
+                yield return null;
+            }
+
+            transform.position = targetPosition;
         }
 
-        // 이동 완료 후 위치 고정
-        transform.position = targetPosition;
-        targetTile.PlaceUnit(this.gameObject);
-        currentTile = targetTile;
-
-        // 이동 완료 후 기본 애니메이션(왼쪽 이동)으로 복귀
-        animator.Play("Move_Left");
+        currentTile.RemoveUnit();
+        currentTile = path[path.Count - 1];
+        currentTile.PlaceUnit(this.gameObject);
 
         isMoving = false;
     }
@@ -87,33 +111,14 @@ public class Unit : MonoBehaviour
     // 이동 방향에 따라 애니메이션을 전환하는 메서드
     private void SetMoveAnimation(Vector3 direction)
     {
-        // 좌우 이동 처리 (오른쪽은 Flip으로 처리)
         if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y))
         {
-            if (direction.x > 0)
-            {
-                // 오른쪽으로 이동 (Flip 사용)
-                spriteRenderer.flipX = true;
-                animator.Play("Move_Left"); // 왼쪽 애니메이션을 Flip
-            }
-            else
-            {
-                // 왼쪽으로 이동
-                spriteRenderer.flipX = false;
-                animator.Play("Move_Left");
-            }
+            spriteRenderer.flipX = direction.x > 0;
+            animator.Play("Move_Left");
         }
-        // 상하 이동 처리
         else
         {
-            if (direction.y > 0)
-            {
-                animator.Play("Move_Up");
-            }
-            else
-            {
-                animator.Play("Move_Down");
-            }
+            animator.Play(direction.y > 0 ? "Move_Up" : "Move_Down");
         }
     }
 
@@ -130,10 +135,10 @@ public class Unit : MonoBehaviour
         Vector3 direction = target.transform.position - transform.position;
         SetAttackAnimation(direction);
 
-        yield return new WaitForSeconds(0.5f); // 공격 애니메이션 대기 시간
+        // 공격 애니메이션 대기 시간
+        yield return new WaitForSeconds(0.5f);
 
-        // 타겟에게 데미지 적용
-        int damage = Mathf.Max(0, stats.attackPower - target.stats.defensePower); // 방어력 계산 후 데미지 적용
+        int damage = Mathf.Max(0, stats.attackPower - target.stats.defensePower);
         target.TakeDamage(damage);
 
         // 공격 후 기본 상태로 복귀
@@ -176,9 +181,9 @@ public class Unit : MonoBehaviour
     // 데미지를 입었을 때 처리
     public void TakeDamage(int damage)
     {
-        stats.mana -= damage;  // 체력 대신 마나로 대체한 예시
+        stats.hp -= damage;
 
-        if (stats.mana <= 0)
+        if (stats.hp <= 0)
         {
             Die();
         }
@@ -187,7 +192,6 @@ public class Unit : MonoBehaviour
     // 사망 처리
     private void Die()
     {
-        // 사망 처리 로직
-        Destroy(gameObject);  // 유닛 제거
+        Destroy(gameObject);
     }
 }
