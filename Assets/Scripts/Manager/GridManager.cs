@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public class GridManager : MonoBehaviour
 {
@@ -7,11 +8,18 @@ public class GridManager : MonoBehaviour
     public GameObject tilePrefab;            // 타일 프리팹
     public Tile[,] tiles;                    // 타일 배열
     public Vector3 offset;
+    public Tilemap tilemap;                  // 타일맵 (유닛 배치를 위해 필요)
+    public UnitPlacementManager unitPlacementManager;
     private GameObject mapParent;
 
     private void Start()
     {
         GenerateGrid();
+
+        if (unitPlacementManager != null)
+        {
+            unitPlacementManager.PlaceUnitsOnGrid();
+        }
     }
 
     void GenerateGrid()
@@ -35,6 +43,17 @@ public class GridManager : MonoBehaviour
                 tiles[x, y] = tile;
             }
         }
+    }
+
+    // 주어진 좌표에 해당하는 타일을 반환하는 메서드 추가
+    public Tile GetTileAtPosition(Vector2Int position)
+    {
+        // 좌표가 그리드 내에 있는지 확인
+        if (position.x >= 0 && position.x < width && position.y >= 0 && position.y < height)
+        {
+            return tiles[position.x, position.y];
+        }
+        return null;
     }
 
     // BFS를 이용하여 유닛의 이동 가능 범위 탐지
@@ -198,5 +217,11 @@ public class GridManager : MonoBehaviour
         }
 
         return attackableTiles;
+    }
+
+    // 타일에서 유닛 배치 상태 업데이트
+    public void UpdateTileUnitStatus(Tile tile, bool hasUnit)
+    {
+        tile.hasUnit = hasUnit;  // 타일의 유닛 상태 업데이트
     }
 }

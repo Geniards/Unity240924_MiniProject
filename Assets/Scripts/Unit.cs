@@ -11,7 +11,10 @@ public class UnitStats
     public int attackPower; 
     public int defensePower;
     public int moveRange;   
+    public int hp;        
+    public int maxHp;        
     public int mana;        
+    public int maxMana;        
 }
 
 public class Unit : MonoBehaviour
@@ -23,6 +26,7 @@ public class Unit : MonoBehaviour
     // 유닛 상태 관리
     public Tile currentTile;     // 유닛이 현재 위치한 타일
     private bool isMoving = false; // 유닛이 이동 중인지 여부
+    public Vector2Int unitCoordinates;
 
     // 컴포넌트
     private Animator animator;
