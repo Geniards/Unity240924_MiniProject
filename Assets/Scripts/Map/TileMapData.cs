@@ -7,6 +7,12 @@ public class TileMapData : ScriptableObject
     public int height;
     public int[] tileData;  // 각 타일의 데이터를 1차원 배열로 저장 (width * height) 양을 줄이려고.
 
+    // 맵 데이터를 초기화할 때 호출
+    public void InitializeMapData()
+    {
+        tileData = new int[width * height];
+    }
+
     // 타일 데이터를 저장하는 메서드
     public void SaveTileData(Tile[,] tiles)
     {

@@ -6,6 +6,7 @@ public class GridManager : MonoBehaviour
     public int width, height;                // 맵의 크기
     public GameObject tilePrefab;            // 타일 프리팹
     public Tile[,] tiles;                    // 타일 배열
+    public Vector3 offset;
     private GameObject mapParent;
 
     private void Start()
@@ -23,7 +24,7 @@ public class GridManager : MonoBehaviour
         {
             for (int y = 0; y < height; y++)
             {
-                var tileObject = Instantiate(tilePrefab, new Vector3(x, y, 0), Quaternion.identity);
+                var tileObject = Instantiate(tilePrefab, new Vector3(x + offset.x, y + offset.y, 0 + offset.z), Quaternion.identity);
                 tileObject.name = $"Tile {x} {y}";
 
                 // 타일 오브젝트를 'Map' 오브젝트의 자식으로 설정
