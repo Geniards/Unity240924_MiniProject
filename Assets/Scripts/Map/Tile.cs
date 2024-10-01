@@ -10,6 +10,7 @@ public class Tile : MonoBehaviour
     public TileState tileState;       // 타일의 상태 (이동 가능/불가 등)
     public int costFromStart;         // 시작 타일부터의 이동 비용
 
+    [SerializeField] private SpriteRenderer spriteRenderer;
     public enum TileState
     {
         Normal,
@@ -28,6 +29,9 @@ public class Tile : MonoBehaviour
         previousTile = null;
         tileState = TileState.Normal;
         costFromStart = 0;
+
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        SetTileAlpha(0f);
     }
 
     public void PlaceUnit(GameObject unit)
@@ -70,13 +74,40 @@ public class Tile : MonoBehaviour
         }
     }
 
-    // 마우스 클릭 시 발생하는 이벤트
     private void OnMouseDown()
     {
-        if (GameManager.Instance.SelectedUnit != null)
+        // 빈 타일을 클릭했을 때 UI를 표시
+        if (!hasUnit)
         {
-            // 유닛이 선택된 상태에서 타일을 클릭한 경우 처리
-            GameManager.Instance.OnTileClicked(this);
+            // TileInfoUI.Instance가 null이 아닌지 확인
+            if (TileInfoUI.Instance != null)
+            {
+                TileInfoUI.Instance.ShowTileInfo(this);
+            }
+            else
+            {
+                Debug.LogError("TileInfoUI.Instance가 초기화되지 않았습니다.");
+            }
+        }
+    }
+
+    private void OnMouseEnter()
+    {
+        SetTileAlpha(0.35f);
+    }
+
+    private void OnMouseExit()
+    {
+        SetTileAlpha(0f);
+    }
+
+    private void SetTileAlpha(float alpha)
+    {
+        if (spriteRenderer != null)
+        {
+            Color color = spriteRenderer.color;
+            color.a = alpha;
+            spriteRenderer.color = color;
         }
     }
 }

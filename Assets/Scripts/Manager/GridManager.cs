@@ -29,8 +29,8 @@ public class GridManager : MonoBehaviour
 
                 // 타일 오브젝트를 'Map' 오브젝트의 자식으로 설정
                 tileObject.transform.parent = mapParent.transform;
-
                 var tile = tileObject.GetComponent<Tile>();
+
                 tile.Init(new Vector2Int(x, y));
                 tiles[x, y] = tile;
             }

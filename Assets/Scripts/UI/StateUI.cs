@@ -171,7 +171,7 @@
 //        // 좌하단 (bottom-left)
 //        else if (isLeft && !isTop)
 //        {
-//            offset = new Vector3(tileWidth*2 + margin, tileHeight, 0);
+//            offset = new Vector3(tileWidth * 2 + margin, tileHeight, 0);
 //        }
 //        // 우하단 (bottom-right)
 //        else if (!isLeft && !isTop)
