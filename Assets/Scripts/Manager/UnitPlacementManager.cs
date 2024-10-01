@@ -45,6 +45,16 @@ public class UnitPlacementManager : MonoBehaviour
                 unitComponent.unitCoordinates = tile.coordinates;
                 unitComponent.currentTile = tile;
                 unitComponent.team = team;
+
+                // TurnManager에 등록 (팀에 따라 다르게 처리)
+                if (team == Team.Ally)
+                {
+                    TurnManager.Instance.AddAllyUnit(unitComponent);
+                }
+                else if (team == Team.Enemy)
+                {
+                    TurnManager.Instance.AddEnemyUnit(unitComponent);
+                }
             }
             else
             {

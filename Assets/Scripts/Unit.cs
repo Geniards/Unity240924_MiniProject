@@ -10,9 +10,10 @@ public enum Team{ Ally,Enemy, TEAM_MAX }
 public class UnitStats
 {
     public string unitName; 
-    public int attackPower; 
-    public int defensePower;
-    public int moveRange;   
+    public int atk; 
+    public int def;
+    public int moveRange;
+    public int attackRange;
     public int hp;        
     public int maxHp;        
     public int mana;        
@@ -27,16 +28,16 @@ public class Unit : MonoBehaviour
 
     // 유닛 상태 관리
     public Tile currentTile;     // 유닛이 현재 위치한 타일
-    private bool isMoving = false; // 유닛이 이동 중인지 여부
+    protected bool isMoving = false;
     public Vector2Int unitCoordinates;
 
     // 컴포넌트
-    private Animator animator;
-    private SpriteRenderer spriteRenderer;
+    protected Animator animator;
+    protected SpriteRenderer spriteRenderer;
 
-    [SerializeField] private float moveSpeed = 2f;
+    [SerializeField] protected float moveSpeed = 2f;
 
-    private void Start()
+    protected virtual void Start()
     {
         animator = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
@@ -56,16 +57,16 @@ public class Unit : MonoBehaviour
     //    }
     //}
 
-    //// 유닛을 타일로 이동시키는 메서드
-    //public void MoveToTile(Tile targetTile)
-    //{
-    //    if (!isMoving)
-    //    {
-    //        List<Tile> path = GridManager.Instance.FindPath(currentTile, targetTile);
-    //        if(path != null)
-    //            StartCoroutine(MoveAlongPath(path));
-    //    }
-    //}
+    // 유닛을 타일로 이동시키는 메서드
+    public void MoveToTile(Tile targetTile)
+    {
+        if (!isMoving)
+        {
+            List<Tile> path = GridManager.Instance.FindPath(currentTile, targetTile);
+            if (path != null)
+                StartCoroutine(MoveAlongPathCoroutine(path));
+        }
+    }
 
     public void MoveAlongPath(List<Tile> path)
     {
@@ -76,7 +77,7 @@ public class Unit : MonoBehaviour
     }
 
     // 이동 코루틴 (애니메이션 포함)
-    private IEnumerator MoveAlongPathCoroutine(List<Tile> path)
+    public IEnumerator MoveAlongPathCoroutine(List<Tile> path)
     {
         isMoving = true;
 
@@ -105,11 +106,19 @@ public class Unit : MonoBehaviour
         currentTile = path[path.Count - 1];
         currentTile.PlaceUnit(this.gameObject);
 
+
         isMoving = false;
+
+        GridManager.Instance.ClearMoveHighlight();
+        // 턴 매니저에게 이동이 완료되었음을 알림
+        if (this.team == Team.Ally)
+        {
+           TurnManager.Instance.NotifyUnitMovementFinished(this);
+        }
     }
 
     // 이동 방향에 따라 애니메이션을 전환하는 메서드
-    private void SetMoveAnimation(Vector3 direction)
+    protected void SetMoveAnimation(Vector3 direction)
     {
         if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y))
         {
@@ -138,7 +147,7 @@ public class Unit : MonoBehaviour
         // 공격 애니메이션 대기 시간
         yield return new WaitForSeconds(0.5f);
 
-        int damage = Mathf.Max(0, stats.attackPower - target.stats.defensePower);
+        int damage = Mathf.Max(0, stats.atk - target.stats.def);
         target.TakeDamage(damage);
 
         // 공격 후 기본 상태로 복귀

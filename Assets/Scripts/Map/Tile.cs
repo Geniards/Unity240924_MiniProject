@@ -192,23 +192,12 @@ public class Tile : MonoBehaviour
 
                 if (path != null)
                 {
-                    unit.MoveAlongPath(path);
-
-                    // 이동 후 하이라이트 제거
-                    ClearMoveHighlight();
+                    unit.MoveToTile(this);
                 }
             }
         }
     }
 
-    // 이동 가능 범위를 초기화하는 메서드
-    private void ClearMoveHighlight()
-    {
-        foreach (Tile tile in GridManager.Instance.GetAllTiles())
-        {
-            tile.SetReachable(false);
-        }
-        Tile.selectedUnit = null;
-    }
+
 }
 

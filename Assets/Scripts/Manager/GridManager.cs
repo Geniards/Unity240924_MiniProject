@@ -65,6 +65,7 @@ public class GridManager : MonoBehaviour
     {
         List<Tile> allTiles = new List<Tile>();
 
+        // 그리드에서 모든 타일을 리스트에 추가
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -205,11 +206,7 @@ public class GridManager : MonoBehaviour
                 {
                     neighbor.costFromStart = newCostToNeighbor;
                     neighbor.parentTile = currentTile;
-
-                    if (!openSet.Contains(neighbor))
-                    {
-                        openSet.Add(neighbor);
-                    }
+                    openSet.Add(neighbor);
                 }
             }
         }
@@ -231,6 +228,93 @@ public class GridManager : MonoBehaviour
 
         path.Reverse();
         return path;
+    }
+
+    // 이동 경로 제한
+    public List<Tile> GetLimitedPath(List<Tile> fullPath, int moveRange)
+    {
+        // 전체 경로에서 이동력 범위 내의 경로만 반환
+        List<Tile> limitedPath = new List<Tile>();
+
+        for (int i = 0; i < Mathf.Min(moveRange, fullPath.Count); i++)
+        {
+            limitedPath.Add(fullPath[i]);
+        }
+
+        return limitedPath;
+    }
+
+    // 적군이 가장 가까운 아군을 찾는 로직
+    public Unit FindClosestAlly(Unit enemy)
+    {
+        Unit closestAlly = null;
+        float closestDistance = float.MaxValue;
+
+        foreach (Unit ally in TurnManager.Instance.allyUnits)
+        {
+            float distance = Vector2.Distance(enemy.currentTile.coordinates, ally.currentTile.coordinates);
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestAlly = ally;
+            }
+        }
+
+        return closestAlly;
+    }
+
+    // 아군 근처에서 이동 가능한 타일을 찾는 메서드
+    public Tile FindValidTileNearTarget(Unit target)
+    {
+        Tile targetTile = target.currentTile;
+        List<Tile> candidateTiles = new List<Tile>();
+
+        Vector2Int[] primaryDirections =
+        {
+            new Vector2Int(0, 1),
+            new Vector2Int(0, -1),
+            new Vector2Int(1, 0),
+            new Vector2Int(-1, 0),
+        };
+
+        Vector2Int[] secondaryDirections =
+        {
+            new Vector2Int(1, 1),
+            new Vector2Int(1, -1),
+            new Vector2Int(-1, 1),
+            new Vector2Int(-1, -1),
+        };
+
+        // 상하좌우 먼저 탐색
+        foreach (Vector2Int dir in primaryDirections)
+        {
+            Tile candidateTile = GridManager.Instance.GetTileAtPosition(targetTile.coordinates + dir);
+            if (candidateTile != null && !candidateTile.hasUnit && candidateTile.tileState != Tile.TileState.Blocked)
+            {
+                candidateTiles.Add(candidateTile);
+            }
+        }
+
+        // 상하좌우에서 이동할 타일을 찾지 못했을 경우 대각선 탐색
+        if (candidateTiles.Count == 0)
+        {
+            foreach (Vector2Int dir in secondaryDirections)
+            {
+                Tile candidateTile = GridManager.Instance.GetTileAtPosition(targetTile.coordinates + dir);
+                if (candidateTile != null && !candidateTile.hasUnit && candidateTile.tileState != Tile.TileState.Blocked)
+                {
+                    candidateTiles.Add(candidateTile);
+                }
+            }
+        }
+
+        // 이동할 수 있는 타일이 있으면 반환
+        if (candidateTiles.Count > 0)
+        {
+            return candidateTiles[0];
+        }
+
+        return null;
     }
 
     // 공격 범위를 탐지하는 메서드
@@ -271,5 +355,15 @@ public class GridManager : MonoBehaviour
     public void UpdateTileUnitStatus(Tile tile, bool hasUnit)
     {
         tile.hasUnit = hasUnit;  // 타일의 유닛 상태 업데이트
+    }
+
+    // 이동 가능 범위를 초기화하는 메서드
+    public void ClearMoveHighlight()
+    {
+        foreach (Tile tile in GetAllTiles())
+        {
+            tile.SetReachable(false);
+        }
+        Tile.selectedUnit = null;
     }
 }
