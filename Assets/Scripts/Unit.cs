@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
+using static TurnManager;
 
 public enum Team{ Ally,Enemy, TEAM_MAX }
 
@@ -36,6 +37,9 @@ public class Unit : MonoBehaviour
     private Vector3 originalPosition;
     private Tile originalTile;
 
+    // 색상을 기억하기 위한 변수
+    private Color originalColor;
+
     // 컴포넌트
     protected Animator animator;
     protected SpriteRenderer spriteRenderer;
@@ -50,21 +54,31 @@ public class Unit : MonoBehaviour
         animator.Play("Move_Left");
 
         // 초기 위치와 타일을 저장
+        originalColor = spriteRenderer.color;
         originalPosition = transform.position;
         originalTile = currentTile;
     }
 
-    //public void OnUnitSelected()
-    //{
-    //     유닛이 선택되었을 때 이동 가능 범위를 탐지
-    //    List<Tile> reachableTiles = GridManager.Instance.FindReachableTiles(currentTile, stats.moveRange);
+    public List<Tile> OnUnitSelected(Unit unit = null)
+    {
+        List<Tile> reachableTiles;
+        if (unit)
+        {
+            reachableTiles = GridManager.Instance.FindReachableTiles(unit.currentTile, unit.stats.moveRange);
+        }
+        else
+        {//유닛이 선택되었을 때 이동 가능 범위를 탐지
+            reachableTiles = GridManager.Instance.FindReachableTiles(currentTile, stats.moveRange);
+        }
 
-    //     탐지된 타일을 하이라이트
-    //    foreach (var tile in reachableTiles)
-    //    {
-    //        tile.UpdateTileState(Tile.TileState.Selected);
-    //    }
-    //}
+        ////탐지된 타일을 하이라이트
+        //foreach (var tile in reachableTiles)
+        //{
+        //    tile.UpdateTileState(Tile.TileState.Selected);
+        //}
+
+        return reachableTiles;
+    }
 
     // 유닛을 타일로 이동시키는 메서드
     public void MoveToTile(Tile targetTile)
@@ -102,7 +116,6 @@ public class Unit : MonoBehaviour
             currentTile.PlaceUnit(gameObject);
             isMoving = false;
             hasMoved = false;
-            GridManager.Instance.ClearMoveHighlight(); // 이동 가능 범위 초기화
             TileUIManager.Instance.HideActionMenu();
         }
     }
@@ -237,15 +250,33 @@ public class Unit : MonoBehaviour
         Debug.Log($"TakeDamage");
         stats.hp -= damage;
 
+        StartCoroutine(FlashRed());
+
         if (stats.hp <= 0)
         {
             Die();
         }
     }
 
+    // 빨간색으로 변하고 다시 원래 색으로 돌아오는 코루틴
+    private IEnumerator FlashRed()
+    {
+        Color originalColor = spriteRenderer.color;
+        spriteRenderer.color = Color.white;          
+
+        yield return new WaitForSeconds(0.2f);     
+
+        spriteRenderer.color = originalColor;      
+    }
+
     // 사망 처리
     private void Die()
     {
+        if (currentTile != null)
+        {
+            currentTile.RemoveUnit();  // 유닛이 사망할 때 타일에서 유닛 정보 제거
+        }
+
         if (team == Team.Ally)
         {
             TurnManager.Instance.RemoveAllyUnit(this);  // 아군 리스트에서 제거
@@ -257,5 +288,34 @@ public class Unit : MonoBehaviour
 
 
         Destroy(gameObject);
+    }
+
+    // 유닛이 턴을 종료할 때 호출 (색상 어둡게)
+    public void EndTurn()
+    {
+        StartCoroutine(DarkenColor());
+    }
+
+    // 유닛의 턴이 시작할 때 호출 (색상 밝게)
+    public void StartTurn()
+    {
+        StartCoroutine(RestoreOriginalColor());
+    }
+
+    // 색상을 어둡게 만드는 코루틴
+    private IEnumerator DarkenColor()
+    {
+        Color darkColor = originalColor * 0.5f;
+        spriteRenderer.color = darkColor;
+
+        yield return null;
+    }
+
+    // 원래 색으로 복구하는 코루틴
+    private IEnumerator RestoreOriginalColor()
+    {
+        spriteRenderer.color = originalColor;
+
+        yield return null;
     }
 }

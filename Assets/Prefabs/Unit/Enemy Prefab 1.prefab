@@ -75,7 +75,7 @@ SpriteRenderer:
   m_SortingLayerID: 834133687
   m_SortingLayer: 2
   m_SortingOrder: 0
-  m_Sprite: {fileID: 1481557502, guid: c15eb8eb18f7910458a866147303b298, type: 3}
+  m_Sprite: {fileID: 855153745, guid: 27edf01f82c525940bffd58bd0b7ae69, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -96,7 +96,7 @@ Animator:
   m_GameObject: {fileID: 391526820094607767}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 1322cba04ba0a2142a3d50ef945d5af4, type: 2}
+  m_Controller: {fileID: 9100000, guid: 7903138547546a742a24391a02847269, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -120,16 +120,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   stats:
-    unitName: 
-    atk: 0
+    unitName: "\uBCD1\uC0AC2"
+    atk: 3
     def: 0
-    moveRange: 2
+    moveRange: 3
     attackRange: 1
-    hp: 0
-    maxHp: 100
-    mana: 0
+    hp: 150
+    maxHp: 150
+    mana: 100
     maxMana: 100
   team: 1
   currentTile: {fileID: 0}
+  hasMoved: 0
   unitCoordinates: {x: 0, y: 0}
   moveSpeed: 2

@@ -144,6 +144,7 @@ public class TurnManager : MonoBehaviour
         else
         {
             Debug.Log("아직 턴이 완료되지 않았습니다.");
+            ChangeState(TurnState.UnitSelection);
         }
     }
 
@@ -266,6 +267,6 @@ public class TurnManager : MonoBehaviour
             // 승리 또는 다음 스테이지로 이동
         }
         else
-            TurnManager.Instance.ChangeState(TurnState.UnitSelection);
+            ChangeState(TurnState.UnitSelection);
     }
 }

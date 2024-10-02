@@ -8,7 +8,10 @@ public class Tile : MonoBehaviour
     public bool hasUnit;
     public GameObject currentUnit;
     public Tile parentTile;
+
     public TileState tileState;
+    public TileState originalState;
+    
     public int costFromStart;
     public bool isReachable;
 
@@ -77,11 +80,13 @@ public class Tile : MonoBehaviour
         currentUnit = null;
         parentTile = null;
         tileState = TileState.Normal;
+        originalState = tileState;
+
         costFromStart = 0;
         isReachable = false;
 
         spriteRenderer = GetComponent<SpriteRenderer>();
-        originalColor = Color.white;
+        originalColor = new Color(1f, 1f, 1f, 0f);
         reachableColor = new Color(0f, 1f, 0f, 0.5f);
         hoverColor = Color.yellow;
         unreachableColor = new Color(1f, 1f, 1f, 0f);
@@ -104,6 +109,12 @@ public class Tile : MonoBehaviour
 
     public void UpdateTileState(TileState newState)
     {
+        // 원본 상태를 처음 변경될 때만 저장 (한 번만 저장)
+        if (tileState == TileState.Normal || tileState == TileState.Blocked)
+        {
+            originalState = tileState;
+        }
+
         tileState = newState;
         UpdateTileVisual();
     }
@@ -163,7 +174,7 @@ public class Tile : MonoBehaviour
             {
                 // 유닛을 선택된 타일로 이동
                 selectedUnit.MoveToTile(this);
-                GridManager.Instance.ClearMoveHighlight();
+                GridManager.Instance.ClearMoveHighlight(selectedUnit.OnUnitSelected());
 
                 // 이동 후 UI에서 액션 버튼을 활성화
             }
@@ -180,8 +191,8 @@ public class Tile : MonoBehaviour
                 if (selectedUnit != null && targetUnit != null && targetUnit.team != selectedUnit.team)
                 {
                     selectedUnit.Attack(targetUnit);
-                    GridManager.Instance.ClearMoveHighlight();
-                    tileState = TileState.Normal;
+                    GridManager.Instance.ClearMoveHighlight(selectedUnit.OnUnitSelected());
+                    
                     // 공격 후 턴을 종료
                     TurnManager.Instance.ChangeState(TurnManager.TurnState.EndTurn);
                 }
@@ -190,7 +201,7 @@ public class Tile : MonoBehaviour
                     Debug.Log("아무도 없음");
                     TileUIManager.Instance.ShowActionMenu(selectedUnit.transform.position, selectedUnit);
                 }
-                GridManager.Instance.ClearMoveHighlight();
+                GridManager.Instance.ClearMoveHighlight(selectedUnit.OnUnitSelected());
             }
         }
     }
@@ -198,12 +209,11 @@ public class Tile : MonoBehaviour
     // 우클릭 시 선택 취소 및 상태 초기화
     private void OnRightClick()
     {
-
         Unit selectedUnit = TurnManager.Instance.GetSelectedUnit();
         if (selectedUnit != null)
         {
             selectedUnit.CancelMove(); // 이동 취소
-            GridManager.Instance.ClearMoveHighlight();
+            GridManager.Instance.ClearMoveHighlight(selectedUnit.OnUnitSelected());
             TurnManager.Instance.ChangeState(TurnManager.TurnState.UnitSelection);
         }
         else
@@ -274,5 +284,12 @@ public class Tile : MonoBehaviour
         {
             tile.SetReachable(true);
         }
+    }
+
+    // 원래 타일 상태로 복원하는 메서드
+    public void RestoreOriginalState()
+    {
+        tileState = originalState;
+        UpdateTileVisual();
     }
 }

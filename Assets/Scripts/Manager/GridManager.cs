@@ -344,7 +344,7 @@ public class GridManager : MonoBehaviour
 
             foreach (Tile neighbor in GetNeighbors(currentTile))
             {
-                if (!attackableTiles.Contains(neighbor))
+                if (!attackableTiles.Contains(neighbor) && neighbor.tileState != Tile.TileState.Blocked)
                 {
                     int newCost = currentTile.costFromStart + 1;
 
@@ -368,19 +368,12 @@ public class GridManager : MonoBehaviour
         tile.hasUnit = hasUnit;  // 타일의 유닛 상태 업데이트
     }
 
-    public void ClearMoveHighlight()
+    public void ClearMoveHighlight(List<Tile> Tiles)
     {
-        foreach (Tile tile in GetAllTiles())
+        foreach (Tile tile in Tiles)
         {
             tile.SetReachable(false); // 모든 타일의 이동 가능 상태 해제
-            tile.tileState = Tile.TileState.Normal;
-        }
-
-        // 현재 상태가 이동이나 공격이 완료되었을 때 유닛 선택을 해제하는 방식으로 변경
-        if (TurnManager.Instance.currentState == TurnManager.TurnState.UnitMove ||
-            TurnManager.Instance.currentState == TurnManager.TurnState.UnitAttack)
-        {
-            Tile.selectedUnit = null; // 선택된 유닛 해제
+            tile.RestoreOriginalState();
         }
 
         Debug.Log("유닛 선택 해제 및 이동 가능 범위 초기화 완료.");

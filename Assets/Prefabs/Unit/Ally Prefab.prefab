@@ -120,16 +120,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   stats:
-    unitName: 
-    atk: 0
+    unitName: "\uC870\uC870"
+    atk: 50
     def: 0
     moveRange: 3
     attackRange: 2
-    hp: 0
+    hp: 100
     maxHp: 100
-    mana: 0
+    mana: 80
     maxMana: 80
   team: 0
   currentTile: {fileID: 0}
+  hasMoved: 0
   unitCoordinates: {x: 0, y: 0}
-  moveSpeed: 2
+  moveSpeed: 3
