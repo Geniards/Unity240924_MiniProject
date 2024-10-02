@@ -1,104 +1,61 @@
 using System.IO;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public class MapEditorManager : MonoBehaviour
 {
-    public TileMapData mapData;        // ScriptableObject로 맵 데이터를 저장
-    public GameObject tilePrefab;      // 타일 프리팹
-    public string csvFileName = "map.csv";   // CSV 파일 이름
+    public Tilemap tilemap;                     // 유니티의 타일맵
+    public TileMapData mapData;                 // ScriptableObject에 저장할 타일 데이터
+    public TileBase defaultTile;                // 기본 타일 (나중에 불러올 때 사용할 타일)
+    public string csvFileName = "map.csv";      // CSV 파일 이름
+    public TileBase[] tileBases;                // 타일 타입을 지정하기 위한 타일베이스 배열 (타일 종류들)
 
-    private Tile[,] tiles;             // 현재 생성된 타일을 저장할 배열
+    private Tile[,] tiles;                      // 현재 생성된 타일을 저장할 배열
 
     private int width;
     private int height;
 
     private void Start()
     {
-        // ScriptableObject로부터 기본 크기 설정
-        width = mapData.width;
-        height = mapData.height;
-        GenerateGridFromScriptableObject();
+        // 타일맵의 크기를 설정
+        BoundsInt bounds = tilemap.cellBounds;
+        width = bounds.size.x;
+        height = bounds.size.y;
+
+        // 필요한 작업 (저장/불러오기)
+        SaveTilemapToScriptableObject();
+        SaveTilemapToCSV();
     }
 
-    // 맵을 ScriptableObject로부터 불러와서 그리드 생성
-    public void GenerateGridFromScriptableObject()
+    // 타일맵 데이터를 ScriptableObject로 저장
+    public void SaveTilemapToScriptableObject()
     {
-        ClearGrid();
-
-        tiles = new Tile[width, height];
+        mapData.InitializeMapData(width, height);
 
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                GameObject tileObject = Instantiate(tilePrefab, new Vector3(x, y, 0), Quaternion.identity);
-                tileObject.name = $"Tile ({x}, {y})";
-                Tile tile = tileObject.GetComponent<Tile>();
-                tile.Init(new Vector2Int(x, y));
-                tiles[x, y] = tile;
-            }
-        }
+                Vector3Int tilePosition = new Vector3Int(x, y, 0);
+                TileBase tile = tilemap.GetTile(tilePosition);
 
-        // ScriptableObject로부터 타일 데이터 로드
-        mapData.LoadTileData(tiles);
-    }
-
-    // 맵을 CSV로부터 불러와서 그리드 생성
-    public void GenerateGridFromCSV()
-    {
-        ClearGrid();
-
-        // Resources 폴더 내에서 CSV 파일을 로드
-        TextAsset csvFile = Resources.Load<TextAsset>(csvFileName);
-        if (csvFile == null)
-        {
-            Debug.LogError("CSV 파일을 찾을 수 없습니다: " + csvFileName);
-            return;
-        }
-
-        string[] lines = csvFile.text.Split('\n');
-        height = lines.Length;
-        width = lines[0].Split(',').Length;
-        tiles = new Tile[width, height];
-
-        for (int y = 0; y < height; y++)
-        {
-            string[] values = lines[y].Split(',');
-            for (int x = 0; x < width; x++)
-            {
-                GameObject tileObject = Instantiate(tilePrefab, new Vector3(x, y, 0), Quaternion.identity);
-                tileObject.name = $"Tile ({x}, {y})";
-                Tile tile = tileObject.GetComponent<Tile>();
-                tile.Init(new Vector2Int(x, y));
-                tiles[x, y] = tile;
-
-                int tileType = int.Parse(values[x]);
-                if (tileType == 1)
+                int tileIndex = x + y * width;
+                if (tile != null)
                 {
-                    tile.UpdateTileState(Tile.TileState.Blocked);  // 장애물
-                }
-                else if (tileType == 2)
-                {
-                    tile.UpdateTileState(Tile.TileState.Normal);  // 유닛이 있는 타일
-                    tile.hasUnit = true;
+                    mapData.tileData[tileIndex] = 1; // 타일이 있으면 1
                 }
                 else
                 {
-                    tile.UpdateTileState(Tile.TileState.Normal);  // 빈 타일
+                    mapData.tileData[tileIndex] = 0; // 없으면 0
                 }
             }
         }
+
+        Debug.Log("Tilemap saved to ScriptableObject.");
     }
 
-    // 맵을 ScriptableObject로 저장
-    public void SaveGridToScriptableObject()
-    {
-        mapData.SaveTileData(tiles);
-        Debug.Log("맵이 ScriptableObject로 저장되었습니다.");
-    }
-
-    // 맵을 CSV로 저장
-    public void SaveGridToCSV()
+    // 타일맵 데이터를 CSV 파일로 저장
+    public void SaveTilemapToCSV()
     {
         string path = Path.Combine(Application.dataPath, csvFileName);
 
@@ -109,16 +66,12 @@ public class MapEditorManager : MonoBehaviour
                 string line = "";
                 for (int x = 0; x < width; x++)
                 {
-                    int tileType = 0;
-                    if (tiles[x, y].tileState == Tile.TileState.Blocked)
-                    {
-                        tileType = 1;
-                    }
-                    else if (tiles[x, y].hasUnit)
-                    {
-                        tileType = 2;
-                    }
+                    Vector3Int tilePosition = new Vector3Int(x, y, 0);
+                    TileBase tile = tilemap.GetTile(tilePosition);
+
+                    int tileType = tile != null ? 1 : 0; // 타일이 있으면 1, 없으면 0
                     line += tileType.ToString();
+
                     if (x < width - 1)
                     {
                         line += ",";
@@ -128,21 +81,128 @@ public class MapEditorManager : MonoBehaviour
             }
         }
 
-        Debug.Log("맵이 CSV 파일로 저장되었습니다: " + path);
+        Debug.Log("Tilemap saved to CSV.");
     }
 
-    // 그리드를 삭제
-    private void ClearGrid()
+    // ScriptableObject로부터 타일맵 불러오기
+    public void LoadTilemapFromScriptableObject()
     {
-        if (tiles != null)
+        for (int x = 0; x < mapData.width; x++)
         {
-            foreach (var tile in tiles)
+            for (int y = 0; y < mapData.height; y++)
             {
-                if (tile != null)
+                int tileIndex = x + y * mapData.width;
+                int tileType = mapData.tileData[tileIndex];
+
+                Vector3Int tilePosition = new Vector3Int(x, y, 0);
+
+                if (tileType == 1)
                 {
-                    Destroy(tile.gameObject);
+                    tilemap.SetTile(tilePosition, defaultTile); // 타일을 배치
+                }
+                else
+                {
+                    tilemap.SetTile(tilePosition, null); // 타일을 제거
                 }
             }
+        }
+
+        Debug.Log("Tilemap loaded from ScriptableObject.");
+    }
+
+    // CSV 파일로부터 타일맵 불러오기
+    public void LoadTilemapFromCSV()
+    {
+        string path = Path.Combine(Application.dataPath, csvFileName);
+        if (!File.Exists(path))
+        {
+            Debug.LogError("CSV 파일을 찾을 수 없습니다.");
+            return;
+        }
+
+        string[] lines = File.ReadAllLines(path);
+        for (int y = 0; y < lines.Length; y++)
+        {
+            string[] values = lines[y].Split(',');
+            for (int x = 0; x < values.Length; x++)
+            {
+                int tileType = int.Parse(values[x]);
+                Vector3Int tilePosition = new Vector3Int(x, y, 0);
+
+                if (tileType == 1)
+                {
+                    tilemap.SetTile(tilePosition, defaultTile); // 타일을 배치
+                }
+                else
+                {
+                    tilemap.SetTile(tilePosition, null); // 타일을 제거
+                }
+            }
+        }
+
+        Debug.Log("Tilemap loaded from CSV.");
+    }
+
+    // 맵을 ScriptableObject로부터 불러와서 타일맵 적용
+    public void GenerateGridFromScriptableObject()
+    {
+        // 기존 타일맵 초기화
+        ClearGrid();
+
+        // ScriptableObject로부터 타일 데이터 로드
+        mapData.LoadTileData(tiles);
+
+        // 타일맵에 데이터 적용
+        ApplyTilemapData(tiles);
+    }
+
+    // 맵을 CSV로부터 불러와서 타일맵 적용
+    public void GenerateGridFromCSV()
+    {
+        // CSV 파일 로드 및 타일 데이터 적용
+        LoadTilemapFromCSV();
+
+        // 타일맵에 데이터 적용
+        ApplyTilemapData(tiles);
+    }
+
+    // 타일맵에 데이터 적용
+    private void ApplyTilemapData(Tile[,] tiles)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                // 타일 인덱스 가져오기
+                int tileIndex = x + y * width;
+                int tileType = mapData.tileData[tileIndex];
+
+                // 타일 타입에 따라 타일맵에 타일 배치
+                if (tileType == 1)
+                {
+                    // Blocked tile (장애물)
+                    tilemap.SetTile(new Vector3Int(x, y, 0), tileBases[1]);
+                }
+                else if (tileType == 2)
+                {
+                    // 유닛이 있는 타일
+                    tilemap.SetTile(new Vector3Int(x, y, 0), tileBases[2]);
+                }
+                else
+                {
+                    // 기본 빈 타일
+                    tilemap.SetTile(new Vector3Int(x, y, 0), tileBases[0]);
+                }
+            }
+        }
+    }
+
+    // 기존 타일맵을 초기화하는 메서드
+    private void ClearGrid()
+    {
+        if (tilemap != null)
+        {
+            tilemap.ClearAllTiles();
         }
     }
 }

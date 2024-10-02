@@ -5,11 +5,12 @@ public class TileMapData : ScriptableObject
 {
     public int width;
     public int height;
-    public int[] tileData;  // 각 타일의 데이터를 1차원 배열로 저장 (width * height) 양을 줄이려고.
+    public int[] tileData;  // 각 타일의 데이터를 1차원 배열로 저장 (width * height)
 
-    // 맵 데이터를 초기화할 때 호출
-    public void InitializeMapData()
+    public void InitializeMapData(int width, int height)
     {
+        this.width = width;
+        this.height = height;
         tileData = new int[width * height];
     }
 
