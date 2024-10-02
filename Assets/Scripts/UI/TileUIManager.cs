@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -24,9 +25,6 @@ public class TileUIManager : MonoBehaviour
             Instance = this;
         else
             Destroy(gameObject);
-
-        // 버튼에 클릭 이벤트 연결
-        endTurnButton.onClick.AddListener(OnEndTurnButtonClick);
 
         // UI 숨김
         background.gameObject.SetActive(false);
@@ -103,10 +101,18 @@ public class TileUIManager : MonoBehaviour
         lastTile = null;
     }
 
-    public void ShowActionMenu(Vector3 unitPosition)
+    public void ShowActionMenu(Vector3 unitPosition, Unit unit)
     {
         actionMenu.gameObject.SetActive(true);
         UpdateUIPosition(actionMenu, unitPosition);
+
+        // 공격 버튼에 클릭 이벤트 추가
+        attackButton.onClick.RemoveAllListeners();
+        attackButton.onClick.AddListener(() => OnAttackButtonClick(unit));
+
+        // 버튼에 클릭 이벤트 연결
+        endTurnButton.onClick.RemoveAllListeners();
+        endTurnButton.onClick.AddListener(() => OnEndTurnButtonClick(unit));
     }
 
     public void HideActionMenu()
@@ -115,8 +121,24 @@ public class TileUIManager : MonoBehaviour
     }
 
     // 턴 종료 버튼 클릭 시 호출
-    private void OnEndTurnButtonClick()
+    private void OnEndTurnButtonClick(Unit unit)
     {
-        TurnManager.Instance.EndAllyTurn();
+        TurnManager.Instance.NotifyUnitMovementFinished(unit);
+        HideActionMenu();
+    }
+    // 공격 버튼
+    private void OnAttackButtonClick(Unit unit)
+    {
+        Unit selectedUnit = TurnManager.Instance.GetSelectedUnit();
+        if (selectedUnit != null)
+        {
+            List<Tile> attackableTiles = GridManager.Instance.FindAttackableTiles(selectedUnit.currentTile, selectedUnit.stats.attackRange);
+            foreach (Tile tile in attackableTiles)
+            {
+                tile.UpdateTileState(Tile.TileState.Attackable);  // 공격 가능 타일을 표시
+            }
+        }
+        HideActionMenu();
+        TurnManager.Instance.ChangeState(TurnManager.TurnState.UnitAttack);
     }
 }

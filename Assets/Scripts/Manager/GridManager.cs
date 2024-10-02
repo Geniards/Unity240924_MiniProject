@@ -162,10 +162,11 @@ public class GridManager : MonoBehaviour
     // A* 알고리즘을 사용하여 경로를 찾는 메서드
     public List<Tile> FindPath(Tile startTile, Tile targetTile)
     {
-        if (targetTile.hasUnit)
+        // 유닛이 있는 타일로 이동할 수 없지만, 자기 자신의 타일은 예외로 함
+        if (targetTile.hasUnit && targetTile != startTile)
         {
             Debug.Log("유닛이 있는 타일로는 이동할 수 없습니다.");
-            return null; // 유닛이 있는 타일로는 경로를 찾지 않음
+            return null;
         }
 
         List<Tile> openSet = new List<Tile>();
@@ -240,7 +241,15 @@ public class GridManager : MonoBehaviour
         {
             limitedPath.Add(fullPath[i]);
         }
-
+        // 경로 상에 다른 유닛이 있는지 확인
+        foreach (Tile tile in limitedPath)
+        {
+            if (tile.hasUnit && tile.currentUnit.GetComponent<Unit>().team != TurnManager.Instance.GetSelectedUnit().team)
+            {
+                // 적군 유닛이 있으면 그 경로를 사용하지 않음
+                return null;
+            }
+        }
         return limitedPath;
     }
 
@@ -264,6 +273,7 @@ public class GridManager : MonoBehaviour
     }
 
     // 아군 근처에서 이동 가능한 타일을 찾는 메서드
+    // 아군 근처에서 이동 가능한 타일을 찾는 메서드
     public Tile FindValidTileNearTarget(Unit target)
     {
         Tile targetTile = target.currentTile;
@@ -271,24 +281,24 @@ public class GridManager : MonoBehaviour
 
         Vector2Int[] primaryDirections =
         {
-            new Vector2Int(0, 1),
-            new Vector2Int(0, -1),
-            new Vector2Int(1, 0),
-            new Vector2Int(-1, 0),
-        };
+        new Vector2Int(0, 1),
+        new Vector2Int(0, -1),
+        new Vector2Int(1, 0),
+        new Vector2Int(-1, 0),
+    };
 
         Vector2Int[] secondaryDirections =
         {
-            new Vector2Int(1, 1),
-            new Vector2Int(1, -1),
-            new Vector2Int(-1, 1),
-            new Vector2Int(-1, -1),
-        };
+        new Vector2Int(1, 1),
+        new Vector2Int(1, -1),
+        new Vector2Int(-1, 1),
+        new Vector2Int(-1, -1),
+    };
 
         // 상하좌우 먼저 탐색
         foreach (Vector2Int dir in primaryDirections)
         {
-            Tile candidateTile = GridManager.Instance.GetTileAtPosition(targetTile.coordinates + dir);
+            Tile candidateTile = GetTileAtPosition(targetTile.coordinates + dir);
             if (candidateTile != null && !candidateTile.hasUnit && candidateTile.tileState != Tile.TileState.Blocked)
             {
                 candidateTiles.Add(candidateTile);
@@ -300,7 +310,7 @@ public class GridManager : MonoBehaviour
         {
             foreach (Vector2Int dir in secondaryDirections)
             {
-                Tile candidateTile = GridManager.Instance.GetTileAtPosition(targetTile.coordinates + dir);
+                Tile candidateTile = GetTileAtPosition(targetTile.coordinates + dir);
                 if (candidateTile != null && !candidateTile.hasUnit && candidateTile.tileState != Tile.TileState.Blocked)
                 {
                     candidateTiles.Add(candidateTile);
@@ -311,11 +321,12 @@ public class GridManager : MonoBehaviour
         // 이동할 수 있는 타일이 있으면 반환
         if (candidateTiles.Count > 0)
         {
-            return candidateTiles[0];
+            return candidateTiles[0]; // 첫 번째 타일 반환
         }
 
         return null;
     }
+
 
     // 공격 범위를 탐지하는 메서드
     public List<Tile> FindAttackableTiles(Tile startTile, int attackRange)
@@ -357,13 +368,21 @@ public class GridManager : MonoBehaviour
         tile.hasUnit = hasUnit;  // 타일의 유닛 상태 업데이트
     }
 
-    // 이동 가능 범위를 초기화하는 메서드
     public void ClearMoveHighlight()
     {
         foreach (Tile tile in GetAllTiles())
         {
-            tile.SetReachable(false);
+            tile.SetReachable(false); // 모든 타일의 이동 가능 상태 해제
+            tile.tileState = Tile.TileState.Normal;
         }
-        Tile.selectedUnit = null;
+
+        // 현재 상태가 이동이나 공격이 완료되었을 때 유닛 선택을 해제하는 방식으로 변경
+        if (TurnManager.Instance.currentState == TurnManager.TurnState.UnitMove ||
+            TurnManager.Instance.currentState == TurnManager.TurnState.UnitAttack)
+        {
+            Tile.selectedUnit = null; // 선택된 유닛 해제
+        }
+
+        Debug.Log("유닛 선택 해제 및 이동 가능 범위 초기화 완료.");
     }
 }

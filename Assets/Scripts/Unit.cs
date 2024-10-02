@@ -28,8 +28,13 @@ public class Unit : MonoBehaviour
 
     // 유닛 상태 관리
     public Tile currentTile;     // 유닛이 현재 위치한 타일
+    public bool hasMoved = false;
     protected bool isMoving = false;
     public Vector2Int unitCoordinates;
+
+    // 이동 전 위치와 타일을 저장하기 위한 필드
+    private Vector3 originalPosition;
+    private Tile originalTile;
 
     // 컴포넌트
     protected Animator animator;
@@ -43,6 +48,10 @@ public class Unit : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
 
         animator.Play("Move_Left");
+
+        // 초기 위치와 타일을 저장
+        originalPosition = transform.position;
+        originalTile = currentTile;
     }
 
     //public void OnUnitSelected()
@@ -62,9 +71,39 @@ public class Unit : MonoBehaviour
     {
         if (!isMoving)
         {
+            // 이동 전 위치 저장
+            originalPosition = transform.position;
+            originalTile = currentTile;
+
+            if (currentTile == targetTile && this.team == Team.Ally)
+            {
+                Debug.Log("자기 자신의 타일을 클릭했습니다. 이동을 생략합니다.");
+                hasMoved = true;  // 이동 완료로 처리
+                TurnManager.Instance.ChangeState(TurnManager.TurnState.ActionUISelect);
+                return;
+            }
+
             List<Tile> path = GridManager.Instance.FindPath(currentTile, targetTile);
             if (path != null)
                 StartCoroutine(MoveAlongPathCoroutine(path));
+
+        }
+    }
+
+    // 유닛을 원래 위치로 되돌리는 메서드
+    public void CancelMove()
+    {
+        if (!isMoving)
+        {
+            StopAllCoroutines();
+            transform.position = originalPosition;
+            currentTile.RemoveUnit(); 
+            currentTile = originalTile;
+            currentTile.PlaceUnit(gameObject);
+            isMoving = false;
+            hasMoved = false;
+            GridManager.Instance.ClearMoveHighlight(); // 이동 가능 범위 초기화
+            TileUIManager.Instance.HideActionMenu();
         }
     }
 
@@ -109,12 +148,17 @@ public class Unit : MonoBehaviour
 
         isMoving = false;
 
-        GridManager.Instance.ClearMoveHighlight();
         // 턴 매니저에게 이동이 완료되었음을 알림
         if (this.team == Team.Ally)
         {
-           TurnManager.Instance.NotifyUnitMovementFinished(this);
+            TurnManager.Instance.ChangeState(TurnManager.TurnState.ActionUISelect);
         }
+    }
+
+    // 턴이 종료되면 상태 초기화
+    public void ResetMovement()
+    {
+        hasMoved = false;
     }
 
     // 이동 방향에 따라 애니메이션을 전환하는 메서드
@@ -190,6 +234,7 @@ public class Unit : MonoBehaviour
     // 데미지를 입었을 때 처리
     public void TakeDamage(int damage)
     {
+        Debug.Log($"TakeDamage");
         stats.hp -= damage;
 
         if (stats.hp <= 0)
@@ -201,6 +246,16 @@ public class Unit : MonoBehaviour
     // 사망 처리
     private void Die()
     {
+        if (team == Team.Ally)
+        {
+            TurnManager.Instance.RemoveAllyUnit(this);  // 아군 리스트에서 제거
+        }
+        else if (team == Team.Enemy)
+        {
+            TurnManager.Instance.RemoveEnemyUnit(this);  // 적군 리스트에서 제거
+        }
+
+
         Destroy(gameObject);
     }
 }

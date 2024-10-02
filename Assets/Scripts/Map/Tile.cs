@@ -1,32 +1,73 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class Tile : MonoBehaviour
 {
-    public Vector2Int coordinates;    // 타일의 좌표
-    public bool hasUnit;              // 유닛이 있는지 여부
-    public GameObject currentUnit;    // 현재 타일에 있는 유닛
-    public Tile parentTile;           // 경로 탐색을 위한 부모 타일
-    public Tile previousTile;         // 이전에 방문한 타일
-    public TileState tileState;       // 타일의 상태 (이동 가능/불가 등)
-    public int costFromStart;         // 시작 타일부터의 이동 비용
+    public Vector2Int coordinates;
+    public bool hasUnit;
+    public GameObject currentUnit;
+    public Tile parentTile;
+    public TileState tileState;
+    public int costFromStart;
     public bool isReachable;
 
     [SerializeField] private SpriteRenderer spriteRenderer;
 
     public static GameObject selectedUnit;
 
-    private Color originalColor;       // 기본 상태 색상 (흰색)
-    private Color reachableColor;      // 이동 가능 색상 (녹색)
-    private Color hoverColor;          // 마우스가 이동 가능 타일 위에 있을 때 색상 (흰색)
-    private Color unreachableColor;    // 이동 불가 색상 (알파값 0)
+    private Color originalColor;
+    private Color reachableColor;
+    private Color hoverColor;
+    private Color unreachableColor;
+
     public enum TileState
     {
         Normal,
-        Blocked,        // 이동 불가 상태
-        Selected,       // 선택된 상태
-        Path,           // 경로의 일부
-        Attackable      // 공격 가능한 범위에 있는 타일
+        Blocked,
+        Selected,
+        Path,
+        Attackable
+    }
+
+    private void Awake()
+    {
+        var eventTrigger = gameObject.AddComponent<EventTrigger>();
+
+        // 마우스 클릭 이벤트
+        EventTrigger.Entry clickEntry = new EventTrigger.Entry
+        {
+            eventID = EventTriggerType.PointerClick
+        };
+        clickEntry.callback.AddListener((eventData) =>
+        {
+            PointerEventData pointerData = (PointerEventData)eventData;
+            if (pointerData.button == PointerEventData.InputButton.Left)
+            {
+                OnTileClicked();
+            }
+            else if (pointerData.button == PointerEventData.InputButton.Right)
+            {
+                OnRightClick();
+            }
+        });
+        eventTrigger.triggers.Add(clickEntry);
+
+        // 마우스 오버 이벤트
+        EventTrigger.Entry hoverEntry = new EventTrigger.Entry
+        {
+            eventID = EventTriggerType.PointerEnter
+        };
+        hoverEntry.callback.AddListener((eventData) => OnTileHoverEnter());
+        eventTrigger.triggers.Add(hoverEntry);
+
+        // 마우스 오버 종료 이벤트
+        EventTrigger.Entry exitEntry = new EventTrigger.Entry
+        {
+            eventID = EventTriggerType.PointerExit
+        };
+        exitEntry.callback.AddListener((eventData) => OnTileHoverExit());
+        eventTrigger.triggers.Add(exitEntry);
     }
 
     public void Init(Vector2Int coords)
@@ -35,17 +76,15 @@ public class Tile : MonoBehaviour
         hasUnit = false;
         currentUnit = null;
         parentTile = null;
-        previousTile = null;
         tileState = TileState.Normal;
         costFromStart = 0;
         isReachable = false;
 
         spriteRenderer = GetComponent<SpriteRenderer>();
-        // 기본 색상 초기화
         originalColor = Color.white;
-        reachableColor = new Color(0f, 1f, 0f, 0.5f); // 녹색 반투명
-        hoverColor = Color.yellow;                    // 노란색
-        unreachableColor = new Color(1f, 1f, 1f, 0f); // 알파값 0
+        reachableColor = new Color(0f, 1f, 0f, 0.5f);
+        hoverColor = Color.yellow;
+        unreachableColor = new Color(1f, 1f, 1f, 0f);
 
         UpdateTileVisual();
         SetTileAlpha(0f);
@@ -71,71 +110,142 @@ public class Tile : MonoBehaviour
 
     private void UpdateTileVisual()
     {
-        Debug.Log("타일 상태 변경: " + tileState);  // 타일 상태가 업데이트 되는지 확인
         switch (tileState)
         {
             case TileState.Normal:
-                GetComponent<SpriteRenderer>().color = Color.white;
+                spriteRenderer.color = originalColor;
                 break;
             case TileState.Blocked:
-                GetComponent<SpriteRenderer>().color = Color.gray;
+                spriteRenderer.color = Color.gray;
                 break;
             case TileState.Selected:
-                GetComponent<SpriteRenderer>().color = Color.green;
+                spriteRenderer.color = Color.green;
                 break;
             case TileState.Path:
-                GetComponent<SpriteRenderer>().color = Color.blue;
+                spriteRenderer.color = Color.blue;
                 break;
             case TileState.Attackable:
-                GetComponent<SpriteRenderer>().color = Color.red;
+                spriteRenderer.color = Color.red;
                 break;
         }
-        originalColor = spriteRenderer.color;
     }
 
-    // 이동 가능 타일 설정
     public void SetReachable(bool reachable)
     {
         isReachable = reachable;
+        spriteRenderer.color = isReachable ? reachableColor : unreachableColor;
+    }
 
-        if (isReachable)
+    // 마우스 클릭 시
+    private void OnTileClicked()
+    {
+
+        if (TurnManager.Instance.currentState == TurnManager.TurnState.UnitSelection && hasUnit && currentUnit != null)
         {
-            spriteRenderer.color = reachableColor; // 이동 가능 범위는 녹색
+            Unit unit = currentUnit.GetComponent<Unit>();
+            if (unit.team == Team.Ally)
+            {
+                TurnManager.Instance.SetSelectedUnit(unit);
+                ShowMoveRange(unit);
+                // 유닛 선택 후 이동 상태로 전환
+                TurnManager.Instance.ChangeState(TurnManager.TurnState.UnitMove);
+            }
+            else if(!unit)
+            {
+                TileUIManager.Instance.ShowTileInfo(this);
+            }
         }
-        else
+        else if (TurnManager.Instance.currentState == TurnManager.TurnState.UnitMove)
         {
-            spriteRenderer.color = unreachableColor; // 그 외 지역은 알파값 0
+            Unit selectedUnit = TurnManager.Instance.GetSelectedUnit();
+
+            if (selectedUnit && isReachable)
+            {
+                // 유닛을 선택된 타일로 이동
+                selectedUnit.MoveToTile(this);
+                GridManager.Instance.ClearMoveHighlight();
+
+                // 이동 후 UI에서 액션 버튼을 활성화
+            }
+        }
+        // 공격 상태 처리
+        else if (TurnManager.Instance.currentState == TurnManager.TurnState.UnitAttack)
+        {
+            if (hasUnit && currentUnit != null)
+            {
+                Unit targetUnit = currentUnit.GetComponent<Unit>();
+                Unit selectedUnit = TurnManager.Instance.GetSelectedUnit();
+
+                // 적군만 공격 가능
+                if (selectedUnit != null && targetUnit != null && targetUnit.team != selectedUnit.team)
+                {
+                    selectedUnit.Attack(targetUnit);
+                    GridManager.Instance.ClearMoveHighlight();
+                    tileState = TileState.Normal;
+                    // 공격 후 턴을 종료
+                    TurnManager.Instance.ChangeState(TurnManager.TurnState.EndTurn);
+                }
+                else
+                {
+                    Debug.Log("아무도 없음");
+                    TileUIManager.Instance.ShowActionMenu(selectedUnit.transform.position, selectedUnit);
+                }
+                GridManager.Instance.ClearMoveHighlight();
+            }
         }
     }
 
-    // 마우스가 타일 위에 있을 때
-    private void OnMouseEnter()
+    // 우클릭 시 선택 취소 및 상태 초기화
+    private void OnRightClick()
     {
-        if (isReachable)
+
+        Unit selectedUnit = TurnManager.Instance.GetSelectedUnit();
+        if (selectedUnit != null)
         {
-            // 이동 가능 범위 안에서는 흰색으로 변경
+            selectedUnit.CancelMove(); // 이동 취소
+            GridManager.Instance.ClearMoveHighlight();
+            TurnManager.Instance.ChangeState(TurnManager.TurnState.UnitSelection);
+        }
+        else
+        {
+            Debug.Log("선택된 유닛이 없습니다. 우클릭이 무시됩니다.");
+        }
+
+    }
+
+    // 마우스 오버 시
+    private void OnTileHoverEnter()
+    {
+        if (tileState == TileState.Attackable)
+        {
+            spriteRenderer.color = Color.red;
+        }
+        else if (isReachable)
+        {
             spriteRenderer.color = hoverColor;
         }
         else
         {
-            // 이동 불가능한 타일은 반투명하게 표시
             SetTileAlpha(0.35f);
         }
 
         if (hasUnit && currentUnit != null)
         {
-            // 유닛이 있는 경우 유닛 정보 표시
             Unit unit = currentUnit.GetComponent<Unit>();
             TileUIManager.Instance.ShowUnitInfo(unit);
         }
+
     }
 
-    // 마우스가 타일을 벗어날 때
-    private void OnMouseExit()
+    // 마우스 오버 종료 시
+    private void OnTileHoverExit()
     {
-        if (isReachable)
+        if (tileState == TileState.Attackable)
         {
-            // 이동 가능 범위로 돌아가면 다시 녹색으로 변경
+            spriteRenderer.color = Color.red;
+        }
+        else if (isReachable)
+        {
             spriteRenderer.color = reachableColor;
         }
         else
@@ -146,7 +256,6 @@ public class Tile : MonoBehaviour
         TileUIManager.Instance.HideInfo();
     }
 
-    // 타일의 알파값 설정
     private void SetTileAlpha(float alpha)
     {
         if (spriteRenderer != null)
@@ -157,47 +266,13 @@ public class Tile : MonoBehaviour
         }
     }
 
-    // 마우스 클릭 시
-    private void OnMouseDown()
+    // 유닛의 이동 범위를 보여주는 메서드
+    private void ShowMoveRange(Unit unit)
     {
-        // 선택된 유닛이 없는 경우
-        if (selectedUnit == null)
+        List<Tile> reachableTiles = GridManager.Instance.FindReachableTiles(unit.currentTile, unit.stats.moveRange);
+        foreach (Tile tile in reachableTiles)
         {
-            // 빈 타일 클릭 시 UI 표시
-            if (hasUnit && currentUnit != null)
-            {
-                var unit = currentUnit.GetComponent<Unit>();
-                if (unit != null)
-                {
-                    selectedUnit = currentUnit;
-                    var reachableTiles = GridManager.Instance.FindReachableTiles(this, unit.stats.moveRange);
-
-                    foreach (Tile tile in reachableTiles)
-                    {
-                        tile.SetReachable(true);
-                        tile.SetTileAlpha(0.5f);
-                    }
-
-                    TileUIManager.Instance.ShowUnitInfo(unit);
-                }
-            }
-        }
-        else
-        {
-            // 선택된 유닛이 있고, 이동 가능 타일을 클릭하면 유닛 이동 처리
-            if (isReachable)
-            {
-                Unit unit = selectedUnit.GetComponent<Unit>();
-                List<Tile> path = GridManager.Instance.FindPath(unit.currentTile, this);
-
-                if (path != null)
-                {
-                    unit.MoveToTile(this);
-                }
-            }
+            tile.SetReachable(true);
         }
     }
-
-
 }
-
