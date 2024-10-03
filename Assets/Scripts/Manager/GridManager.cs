@@ -273,7 +273,6 @@ public class GridManager : MonoBehaviour
     }
 
     // 아군 근처에서 이동 가능한 타일을 찾는 메서드
-    // 아군 근처에서 이동 가능한 타일을 찾는 메서드
     public Tile FindValidTileNearTarget(Unit target)
     {
         Tile targetTile = target.currentTile;
@@ -344,7 +343,11 @@ public class GridManager : MonoBehaviour
 
             foreach (Tile neighbor in GetNeighbors(currentTile))
             {
-                if (!attackableTiles.Contains(neighbor) && neighbor.tileState != Tile.TileState.Blocked)
+                // Blocked 타일은 탐지에서 무시
+                if (neighbor.tileState == Tile.TileState.Blocked)
+                    continue;
+
+                if(!attackableTiles.Contains(neighbor))
                 {
                     int newCost = currentTile.costFromStart + 1;
 
@@ -353,6 +356,11 @@ public class GridManager : MonoBehaviour
                         neighbor.costFromStart = newCost;
                         attackableTiles.Add(neighbor);
                         queue.Enqueue(neighbor);
+                    }
+
+                    // 시작 타일이 아니면 공격 가능 타일로 표시
+                    if (neighbor != startTile)
+                    {
                         neighbor.UpdateTileState(Tile.TileState.Attackable);
                     }
                 }

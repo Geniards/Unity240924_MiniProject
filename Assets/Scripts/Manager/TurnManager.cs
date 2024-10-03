@@ -47,6 +47,7 @@ public class TurnManager : MonoBehaviour
             foreach (var unit in allyUnits)
             {
                 unit.ResetMovement();
+                unit.StartTurn();
             }
 
             allyUnitsFinishedMovement = 0;  // 이동 완료 유닛 초기화
@@ -127,8 +128,10 @@ public class TurnManager : MonoBehaviour
         }
         else
         {
+            //selectedUnit.EndTurn();
             ChangeState(TurnState.UnitSelection);
         }
+        selectedUnit.EndTurn();
 
     }
 
