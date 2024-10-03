@@ -30,7 +30,8 @@ public class Unit : MonoBehaviour
     // 유닛 상태 관리
     public Tile currentTile;     // 유닛이 현재 위치한 타일
     public bool hasMoved = false;
-    protected bool isMoving = false;
+    public bool isMoving = false;
+    public bool hasEndedTurn = false;
     public Vector2Int unitCoordinates;
 
     // 이동 전 위치와 타일을 저장하기 위한 필드
@@ -293,19 +294,21 @@ public class Unit : MonoBehaviour
     // 유닛이 턴을 종료할 때 호출 (색상 어둡게)
     public void EndTurn()
     {
+        hasEndedTurn = true;
         StartCoroutine(DarkenColor());
     }
 
     // 유닛의 턴이 시작할 때 호출 (색상 밝게)
     public void StartTurn()
     {
+        hasEndedTurn = false;
         StartCoroutine(RestoreOriginalColor());
     }
 
     // 색상을 어둡게 만드는 코루틴
     private IEnumerator DarkenColor()
     {
-        Color darkColor = originalColor * 0.5f;
+        Color darkColor = originalColor * 0.8f;
         spriteRenderer.color = darkColor;
 
         yield return null;

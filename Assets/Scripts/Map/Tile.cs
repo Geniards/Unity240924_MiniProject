@@ -141,19 +141,21 @@ public class Tile : MonoBehaviour
         }
     }
 
-    public void SetReachable(bool reachable)
-    {
-        isReachable = reachable;
-        spriteRenderer.color = isReachable ? reachableColor : unreachableColor;
-    }
-
     // 마우스 클릭 시
     private void OnTileClicked()
     {
-
+        // 유닛을 선택 전
         if (TurnManager.Instance.currentState == TurnManager.TurnState.UnitSelection && hasUnit && currentUnit != null)
         {
             Unit unit = currentUnit.GetComponent<Unit>();
+
+            // 유닛의 턴이 종료된 경우 클릭 동작을 무시
+            if (unit.hasEndedTurn)
+            {
+                Debug.Log("턴이 종료된 유닛입니다. 동작하지 않습니다.");
+                return;
+            }
+
             if (unit.team == Team.Ally)
             {
                 TurnManager.Instance.SetSelectedUnit(unit);
@@ -161,11 +163,12 @@ public class Tile : MonoBehaviour
                 // 유닛 선택 후 이동 상태로 전환
                 TurnManager.Instance.ChangeState(TurnManager.TurnState.UnitMove);
             }
-            else if(!unit)
-            {
-                TileUIManager.Instance.ShowTileInfo(this);
-            }
         }
+        else if (TurnManager.Instance.currentState == TurnManager.TurnState.UnitSelection && !hasUnit && !currentUnit)
+        {
+            TileUIManager.Instance.ShowTileInfo(this);
+        }
+        // 유닛을 선택 후
         else if (TurnManager.Instance.currentState == TurnManager.TurnState.UnitMove)
         {
             Unit selectedUnit = TurnManager.Instance.GetSelectedUnit();
@@ -192,16 +195,16 @@ public class Tile : MonoBehaviour
                 {
                     selectedUnit.Attack(targetUnit);
                     GridManager.Instance.ClearMoveHighlight(selectedUnit.OnUnitSelected());
-                    
+
                     // 공격 후 턴을 종료
-                    TurnManager.Instance.ChangeState(TurnManager.TurnState.EndTurn);
+                    TurnManager.Instance.NotifyUnitMovementFinished(selectedUnit); // 턴 종료 처리
                 }
                 else
                 {
                     Debug.Log("아무도 없음");
                     TileUIManager.Instance.ShowActionMenu(selectedUnit.transform.position, selectedUnit);
+                    GridManager.Instance.ClearMoveHighlight(selectedUnit.OnUnitSelected());
                 }
-                GridManager.Instance.ClearMoveHighlight(selectedUnit.OnUnitSelected());
             }
         }
     }
@@ -276,13 +279,30 @@ public class Tile : MonoBehaviour
         }
     }
 
+    // 하이라이트 적용 색상 설정 메서드
+    public void SetReachable(bool reachable)
+    {
+        // Blocked된 타일은 reachable 상태를 변경하지 않음
+        if (tileState == TileState.Blocked)
+        {
+            return; // Blocked 타일은 하이라이트 적용되지 않음
+        }
+
+        isReachable = reachable;
+        spriteRenderer.color = isReachable ? reachableColor : unreachableColor;
+    }
+
     // 유닛의 이동 범위를 보여주는 메서드
     private void ShowMoveRange(Unit unit)
     {
         List<Tile> reachableTiles = GridManager.Instance.FindReachableTiles(unit.currentTile, unit.stats.moveRange);
         foreach (Tile tile in reachableTiles)
         {
-            tile.SetReachable(true);
+            // Blocked 상태가 아닌 경우에만 하이라이트 적용
+            if (tile.tileState != TileState.Blocked)
+            {
+                tile.SetReachable(true);
+            }
         }
     }
 
