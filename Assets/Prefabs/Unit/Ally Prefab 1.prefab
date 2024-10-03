@@ -120,7 +120,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   stats:
-    unitName: "\uC870\uC8702"
+    unitName: "\uC870\uC870"
     atk: 200
     def: 0
     moveRange: 3
@@ -132,5 +132,7 @@ MonoBehaviour:
   team: 0
   currentTile: {fileID: 0}
   hasMoved: 0
+  isMoving: 0
+  hasEndedTurn: 0
   unitCoordinates: {x: 0, y: 0}
-  moveSpeed: 2
+  moveSpeed: 3

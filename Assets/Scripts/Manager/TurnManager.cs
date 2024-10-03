@@ -146,6 +146,7 @@ public class TurnManager : MonoBehaviour
         }
         else
         {
+            NotifyUnitMovementFinished(GetSelectedUnit());
             Debug.Log("아직 턴이 완료되지 않았습니다.");
             ChangeState(TurnState.UnitSelection);
         }

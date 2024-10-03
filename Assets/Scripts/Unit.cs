@@ -210,6 +210,12 @@ public class Unit : MonoBehaviour
 
         // 공격 후 기본 상태로 복귀
         animator.Play("Move_Left");
+
+        // 공격 모션이 완료된 후에 턴 종료
+        yield return new WaitForSeconds(0.5f);  // 공격 후 잠시 대기
+
+        // 턴 매니저에게 공격이 끝났음을 알리고 턴 종료
+        TurnManager.Instance.ChangeState(TurnManager.TurnState.EndTurn);
     }
 
     // 공격 방향에 따라 애니메이션을 전환하는 메서드
@@ -251,12 +257,26 @@ public class Unit : MonoBehaviour
         Debug.Log($"TakeDamage");
         stats.hp -= damage;
 
-        StartCoroutine(FlashRed());
+        // 피격 애니메이션 재생
+        StartCoroutine(PlayDamageAnimation());
 
         if (stats.hp <= 0)
         {
             Die();
         }
+    }
+
+    // 피격 애니메이션 재생 코루틴
+    private IEnumerator PlayDamageAnimation()
+    {
+        animator.Play("Damage");
+
+        StartCoroutine(FlashRed());
+
+        // 피격 애니메이션이 끝날 때까지 대기
+        yield return new WaitForSeconds(animator.GetCurrentAnimatorStateInfo(0).length);
+
+        animator.Play("Move_Left");
     }
 
     // 빨간색으로 변하고 다시 원래 색으로 돌아오는 코루틴
@@ -280,11 +300,11 @@ public class Unit : MonoBehaviour
 
         if (team == Team.Ally)
         {
-            TurnManager.Instance.RemoveAllyUnit(this);  // 아군 리스트에서 제거
+            TurnManager.Instance.RemoveAllyUnit(this);
         }
         else if (team == Team.Enemy)
         {
-            TurnManager.Instance.RemoveEnemyUnit(this);  // 적군 리스트에서 제거
+            TurnManager.Instance.RemoveEnemyUnit(this);
         }
 
 

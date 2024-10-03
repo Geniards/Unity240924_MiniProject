@@ -121,16 +121,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   stats:
     unitName: "\uBCD1\uC0AC2"
-    atk: 3
+    atk: 5
     def: 0
     moveRange: 3
     attackRange: 1
-    hp: 150
-    maxHp: 150
-    mana: 100
-    maxMana: 100
+    hp: 60
+    maxHp: 60
+    mana: 50
+    maxMana: 50
   team: 1
   currentTile: {fileID: 0}
   hasMoved: 0
+  isMoving: 0
+  hasEndedTurn: 0
   unitCoordinates: {x: 0, y: 0}
   moveSpeed: 2
