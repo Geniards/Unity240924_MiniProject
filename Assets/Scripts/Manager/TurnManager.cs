@@ -176,10 +176,60 @@ public class TurnManager : MonoBehaviour
 
         Debug.Log($"{name}의 턴 시작");
 
+        // 1. 공격 가능 범위 내에 아군이 있는지 먼저 확인
+        Debug.Log($"적군에서 공격할 유닛은 {unit.name}이고 공격 범위는 {unit.stats.attackRange} 이다.");
+
+        List<Tile> attackableTiles = GridManager.Instance.FindAttackableTiles(unit.currentTile, unit.stats.attackRange);
+        Unit closestAllyInRange = null;
+
+        foreach (var v in attackableTiles)
+            Debug.Log($"{v.name}");
+
+        foreach (Tile tile in attackableTiles)
+        {
+            if (tile.hasUnit && tile.currentUnit != null)
+            {
+                Unit targetUnit = tile.currentUnit.GetComponent<Unit>();
+                if (targetUnit.team == Team.Ally)
+                {
+                    closestAllyInRange = targetUnit;
+                    break;
+                }
+            }
+        }
+
+        // 2. 공격 가능 범위에 아군이 있으면 이동하지 않고 바로 공격
+        if (closestAllyInRange != null)
+        {
+            Debug.Log("적군이 공격 범위 안에 아군을 발견, 공격을 시도합니다.");
+
+            // 공격 범위 하이라이트
+            foreach (Tile tile in attackableTiles)
+            {
+                tile.UpdateTileState(Tile.TileState.Attackable);
+            }
+
+            // 잠시 대기 후 공격
+            yield return new WaitForSeconds(0.5f);
+            unit.Attack(closestAllyInRange);
+
+            // 공격 후 하이라이트 제거
+            foreach (Tile tile in attackableTiles)
+            {
+                tile.RestoreOriginalState();
+            }
+
+            // 턴 종료
+            yield return new WaitForSeconds(0.5f);
+            Debug.Log($"{unit.name}의 턴 종료");
+            yield break; // 공격 후 턴을 넘김
+        }
+
+        // 3. 공격 범위 안에 아군이 없으면 이동
         Unit closestAlly = GridManager.Instance.FindClosestAlly(unit);
         if (closestAlly != null)
         {
-            // 1. 이동 가능한 타일 탐색
+            // 이동 가능한 타일 탐색
             List<Tile> reachableTiles = GridManager.Instance.FindReachableTiles(unit.currentTile, unit.stats.moveRange);
 
             foreach (Tile tile in reachableTiles)
@@ -190,18 +240,18 @@ public class TurnManager : MonoBehaviour
             yield return new WaitForSeconds(0.5f);
 
 
-            // 2. 아군 주변의 이동 가능한 타일 선택
+            // 아군 주변의 이동 가능한 타일 선택
             Tile targetTile = GridManager.Instance.FindValidTileNearTarget(closestAlly);
 
             if (targetTile)
             {
-                // 3. 경로 탐색 및 이동
+                // 경로 탐색 및 이동
                 List<Tile> path = GridManager.Instance.FindPath(unit.currentTile, targetTile);
                 List<Tile> limitedPath = GridManager.Instance.GetLimitedPath(path, unit.stats.moveRange);
 
                 if (limitedPath != null && limitedPath.Count > 0)
                 {
-                    yield return StartCoroutine(unit.MoveAlongPathCoroutine(limitedPath));  // 적군 이동
+                    yield return StartCoroutine(unit.MoveAlongPathCoroutine(limitedPath));
                 }
             }
             else
@@ -215,7 +265,51 @@ public class TurnManager : MonoBehaviour
             {
                 tile.SetReachable(false);
             }
+
+            // 4. 아군이 공격 범위 내에 들어왔는지 확인
+            attackableTiles = GridManager.Instance.FindAttackableTiles(unit.currentTile, unit.stats.attackRange);
+            closestAllyInRange = null;
+
+            foreach (Tile tile in attackableTiles)
+            {
+                if (tile.hasUnit && tile.currentUnit != null)
+                {
+                    Unit targetUnit = tile.currentUnit.GetComponent<Unit>();
+                    if (targetUnit.team == Team.Ally)
+                    {
+                        closestAllyInRange = targetUnit;
+                        break;
+                    }
+                }
+            }
+
+            // 공격 가능 범위에 아군이 있으면 공격
+            if (closestAllyInRange != null)
+            {
+                Debug.Log("적군이 이동 후 공격 범위 안에 아군을 발견, 공격을 시도합니다.");
+
+                // 공격 가능 타일 하이라이트
+                foreach (Tile tile in attackableTiles)
+                {
+                    tile.UpdateTileState(Tile.TileState.Attackable);
+                }
+
+                // 5. 공격 대기 및 실행
+                yield return new WaitForSeconds(0.5f);
+
+                unit.Attack(closestAlly);  // 적군이 아군을 공격
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            // 공격하지 않더라도 하이라이트는 무조건 제거
+            foreach (Tile tile in attackableTiles)
+            {
+                tile.RestoreOriginalState();
+            }
         }
+
+
+
         Debug.Log($"{unit.name}의 턴 종료");
     }
 

@@ -359,10 +359,10 @@ public class GridManager : MonoBehaviour
                     }
 
                     // 시작 타일이 아니면 공격 가능 타일로 표시
-                    if (neighbor != startTile)
-                    {
-                        neighbor.UpdateTileState(Tile.TileState.Attackable);
-                    }
+                    //if (neighbor != startTile)
+                    //{
+                    //    neighbor.UpdateTileState(Tile.TileState.Attackable);
+                    //}
                 }
             }
         }
