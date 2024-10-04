@@ -121,6 +121,9 @@ public class TurnManager : MonoBehaviour
         allyUnitsFinishedMovement++;
         Debug.Log($"유닛 {unit.stats.unitName} 이동 완료: {allyUnitsFinishedMovement} / {allyUnits.Count}");
 
+        selectedUnit.EndTurn();
+        unit.SaveOriginalPosition();  // 현재 위치 저장
+
         if (allyUnitsFinishedMovement >= allyUnits.Count)
         {
             ChangeState(TurnState.EndTurn);
@@ -131,8 +134,6 @@ public class TurnManager : MonoBehaviour
             //selectedUnit.EndTurn();
             ChangeState(TurnState.UnitSelection);
         }
-        selectedUnit.EndTurn();
-
     }
 
     // 아군 유닛의 턴이 모두 끝났는지 확인하고 턴 종료 처리
@@ -142,6 +143,13 @@ public class TurnManager : MonoBehaviour
         {
             Debug.Log("모든 아군의 턴이 종료되었습니다. 적군의 턴을 시작합니다.");
             allyUnitsFinishedMovement = 0; // 완료된 아군 유닛 수 초기화
+
+            // 아군 턴이 끝나면 모든 아군 유닛의 상태를 초기화
+            foreach (var unit in allyUnits)
+            {
+                unit.ResetTurnState();
+            }
+
             StartCoroutine(StartEnemyTurn()); // 적군의 턴 시작
         }
         else

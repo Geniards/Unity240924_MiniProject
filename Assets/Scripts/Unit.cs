@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -60,18 +61,33 @@ public class Unit : MonoBehaviour
         originalTile = currentTile;
     }
 
-    public List<Tile> OnUnitSelected(Unit unit = null)
+    public List<Tile> OnUnitSelected(bool isAttack = false, Unit unit = null)
     {
         List<Tile> reachableTiles;
-        if (unit)
+
+        if (isAttack)
         {
-            reachableTiles = GridManager.Instance.FindReachableTiles(unit.currentTile, unit.stats.moveRange);
-        }
-        else
-        {//유닛이 선택되었을 때 이동 가능 범위를 탐지
-            reachableTiles = GridManager.Instance.FindReachableTiles(currentTile, stats.moveRange);
+            if (unit)
+            {
+                reachableTiles = GridManager.Instance.FindReachableTiles(unit.currentTile, unit.stats.moveRange);
+            }
+            else
+            {//유닛이 선택되었을 때 이동 가능 범위를 탐지
+                reachableTiles = GridManager.Instance.FindReachableTiles(currentTile, stats.moveRange);
+            }
         }
 
+        else
+        {
+            if (unit)
+            {
+                reachableTiles = GridManager.Instance.FindAttackableTiles(unit.currentTile, unit.stats.moveRange);
+            }
+            else
+            {//유닛이 선택되었을 때 이동 가능 범위를 탐지
+                reachableTiles = GridManager.Instance.FindAttackableTiles(currentTile, stats.moveRange);
+            }
+        }
         ////탐지된 타일을 하이라이트
         //foreach (var tile in reachableTiles)
         //{
@@ -105,10 +121,25 @@ public class Unit : MonoBehaviour
         }
     }
 
+    // 이동 전 위치 저장
+    public void SaveOriginalPosition()
+    {
+        originalPosition = transform.position;
+        originalTile = currentTile;
+    }
+
+    // 턴이 종료되면 상태 초기화
+    public void ResetTurnState()
+    {
+        hasEndedTurn = false;
+        originalPosition = Vector3.zero;
+        originalTile = null;
+    }
+
     // 유닛을 원래 위치로 되돌리는 메서드
     public void CancelMove()
     {
-        if (!isMoving)
+        if (!isMoving && originalTile)
         {
             StopAllCoroutines();
             transform.position = originalPosition;
@@ -118,6 +149,10 @@ public class Unit : MonoBehaviour
             isMoving = false;
             hasMoved = false;
             TileUIManager.Instance.HideActionMenu();
+        }
+        else
+        {
+            Debug.Log($"턴이 바뀌어서 초기화 진행이 안됩니다.");
         }
     }
 
@@ -209,7 +244,10 @@ public class Unit : MonoBehaviour
         target.TakeDamage(damage);
 
         // 공격 후 기본 상태로 복귀
-        animator.Play("Move_Left");
+        //animator.Play("Move_Left");
+
+        // 공격범위 하이라이트 끄기
+        GridManager.Instance.ClearMoveHighlight(OnUnitSelected(true));
 
         // 공격 모션이 완료된 후에 턴 종료
         yield return new WaitForSeconds(0.5f);  // 공격 후 잠시 대기

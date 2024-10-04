@@ -11383,12 +11383,12 @@ MonoBehaviour:
   allyUnits:
   - unitPrefab: {fileID: 391526820094607767, guid: c200397ac7d872e4ea1804b2c9297c93, type: 3}
     placementCoords: {x: 4, y: 4}
-  - unitPrefab: {fileID: 391526820094607767, guid: a2df5f1eecb6059408041a5294fb0d72, type: 3}
+  - unitPrefab: {fileID: 391526820094607767, guid: e3aaa98b1744b8d4ebb87139eda0972d, type: 3}
     placementCoords: {x: 4, y: 6}
   enemyUnits:
   - unitPrefab: {fileID: 391526820094607767, guid: a2e90bea27f625245a8301061b92f045, type: 3}
     placementCoords: {x: 7, y: 7}
-  - unitPrefab: {fileID: 391526820094607767, guid: 5b559d8107a9e0348af033267ae081fc, type: 3}
+  - unitPrefab: {fileID: 391526820094607767, guid: 8ab2637810027c349bcb92588ff16fcb, type: 3}
     placementCoords: {x: 12, y: 7}
   tilemap: {fileID: 539044168}
   gridManager: {fileID: 1622128072}

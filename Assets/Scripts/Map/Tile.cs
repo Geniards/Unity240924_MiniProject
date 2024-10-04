@@ -180,6 +180,7 @@ public class Tile : MonoBehaviour
                 GridManager.Instance.ClearMoveHighlight(selectedUnit.OnUnitSelected());
 
                 // 이동 후 UI에서 액션 버튼을 활성화
+                // 공격버튼 클릭시 공격범위 활성화
             }
         }
         // 공격 상태 처리
@@ -194,13 +195,12 @@ public class Tile : MonoBehaviour
                 if (selectedUnit != null && targetUnit != null && targetUnit.team != selectedUnit.team)
                 {
                     selectedUnit.Attack(targetUnit);
-                    GridManager.Instance.ClearMoveHighlight(selectedUnit.OnUnitSelected());
                 }
                 else
                 {
                     Debug.Log("아무도 없음");
                     TileUIManager.Instance.ShowActionMenu(selectedUnit.transform.position, selectedUnit);
-                    GridManager.Instance.ClearMoveHighlight(selectedUnit.OnUnitSelected());
+                    GridManager.Instance.ClearMoveHighlight(selectedUnit.OnUnitSelected(true));
                 }
             }
         }
