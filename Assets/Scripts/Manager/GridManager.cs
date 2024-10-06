@@ -317,15 +317,46 @@ public class GridManager : MonoBehaviour
             }
         }
 
-        // 이동할 수 있는 타일이 있으면 반환
-        if (candidateTiles.Count > 0)
+        // 이제 이동 가능한 타일 중 아군에게 가장 가까운 타일을 찾음
+        float closestDistance = float.MaxValue;
+        Tile closestTile = null;
+
+        foreach (Tile tile in candidateTiles)
         {
-            return candidateTiles[0]; // 첫 번째 타일 반환
+            float distance = Vector2.Distance(tile.coordinates, target.currentTile.coordinates);
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestTile = tile;
+            }
         }
 
-        return null;
+        return closestTile;
     }
 
+    // 유닛이 있는 경우 다른 경로
+    public Tile FindClosestValidTile(Unit enemy, Unit target)
+    {
+        Tile targetTile = target.currentTile;
+        List<Tile> reachableTiles = GridManager.Instance.FindReachableTiles(enemy.currentTile, enemy.stats.moveRange);
+        Tile closestValidTile = null;
+        float closestDistance = float.MaxValue;
+
+        foreach (Tile tile in reachableTiles)
+        {
+            if (!tile.hasUnit && tile.tileState != Tile.TileState.Blocked)
+            {
+                float distance = Vector2.Distance(tile.coordinates, targetTile.coordinates);
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestValidTile = tile;
+                }
+            }
+        }
+
+        return closestValidTile;
+    }
 
     // 공격 범위를 탐지하는 메서드
     public List<Tile> FindAttackableTiles(Tile startTile, int attackRange)

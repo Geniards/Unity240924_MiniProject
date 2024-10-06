@@ -116,8 +116,12 @@ public class Unit : MonoBehaviour
 
             List<Tile> path = GridManager.Instance.FindPath(currentTile, targetTile);
             if (path != null)
+            {
+                // 이동 전 현재 타일의 유닛 상태를 초기화 (유닛이 떠난 타일)
+                currentTile.RemoveUnit();
+                Debug.Log("prev currentTile: " + currentTile.coordinates);
                 StartCoroutine(MoveAlongPathCoroutine(path));
-
+            }
         }
     }
 
@@ -190,9 +194,10 @@ public class Unit : MonoBehaviour
             transform.position = targetPosition;
         }
 
-        currentTile.RemoveUnit();
+        // 이동이 끝난 후 타일 상태 업데이트 (새로운 타일에 유닛 정보 설정)
         currentTile = path[path.Count - 1];
         currentTile.PlaceUnit(this.gameObject);
+        Debug.Log("new currentTile: " + currentTile.coordinates);
 
 
         isMoving = false;
@@ -244,7 +249,7 @@ public class Unit : MonoBehaviour
         target.TakeDamage(damage);
 
         // 공격 후 기본 상태로 복귀
-        //animator.Play("Move_Left");
+        animator.Play("Move_Left");
 
         // 공격범위 하이라이트 끄기
         GridManager.Instance.ClearMoveHighlight(OnUnitSelected(true));

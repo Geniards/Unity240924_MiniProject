@@ -123,7 +123,7 @@ MonoBehaviour:
     unitName: "\uBCD1\uC0AC2"
     atk: 5
     def: 0
-    moveRange: 3
+    moveRange: 2
     attackRange: 1
     hp: 60
     maxHp: 60

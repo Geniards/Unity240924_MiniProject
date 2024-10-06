@@ -132,5 +132,7 @@ MonoBehaviour:
   team: 1
   currentTile: {fileID: 0}
   hasMoved: 0
+  isMoving: 0
+  hasEndedTurn: 0
   unitCoordinates: {x: 0, y: 0}
   moveSpeed: 2

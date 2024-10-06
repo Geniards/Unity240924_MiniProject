@@ -221,12 +221,6 @@ public class TurnManager : MonoBehaviour
             yield return new WaitForSeconds(0.5f);
             unit.Attack(closestAllyInRange);
 
-            // 공격 후 하이라이트 제거
-            foreach (Tile tile in attackableTiles)
-            {
-                tile.RestoreOriginalState();
-            }
-
             // 턴 종료
             yield return new WaitForSeconds(0.5f);
             Debug.Log($"{unit.name}의 턴 종료");
@@ -240,6 +234,7 @@ public class TurnManager : MonoBehaviour
             // 이동 가능한 타일 탐색
             List<Tile> reachableTiles = GridManager.Instance.FindReachableTiles(unit.currentTile, unit.stats.moveRange);
 
+            // 이동 가능타일 하이라이트 On
             foreach (Tile tile in reachableTiles)
             {
                 tile.SetReachable(true);
@@ -247,14 +242,12 @@ public class TurnManager : MonoBehaviour
 
             yield return new WaitForSeconds(0.5f);
 
-
-            // 아군 주변의 이동 가능한 타일 선택
-            Tile targetTile = GridManager.Instance.FindValidTileNearTarget(closestAlly);
-
-            if (targetTile)
+            // 가까운 아군근처 타일 탐지
+            Tile closestTile = GridManager.Instance.FindClosestValidTile(unit, closestAlly);
+            if (closestTile != null)
             {
                 // 경로 탐색 및 이동
-                List<Tile> path = GridManager.Instance.FindPath(unit.currentTile, targetTile);
+                List<Tile> path = GridManager.Instance.FindPath(unit.currentTile, closestTile);
                 List<Tile> limitedPath = GridManager.Instance.GetLimitedPath(path, unit.stats.moveRange);
 
                 if (limitedPath != null && limitedPath.Count > 0)
