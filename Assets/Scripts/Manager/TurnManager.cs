@@ -22,6 +22,8 @@ public class TurnManager : MonoBehaviour
     public TurnState currentState;   // 현재 FSM 상태
     private Unit selectedUnit;       // 현재 선택된 유닛
     private int allyUnitsFinishedMovement = 0;
+    private int enemyUnitsFinishedMovement = 0;
+    private bool enemyTurnInProgress = false;
 
     private void Awake()
     {
@@ -76,9 +78,21 @@ public class TurnManager : MonoBehaviour
 
                 break;
             case TurnState.EndTurn:
-                CheckAllyTurnCompletion();
+                if (AreAllAlliesFinished())
+                {
+                    StartCoroutine(StartEnemyTurn());  // 적군 턴 시작
+                }
                 break;
         }
+    }
+    private bool AreAllAlliesFinished()
+    {
+        return allyUnitsFinishedMovement >= allyUnits.Count;
+    }
+
+    private bool AreAllEnemiesFinished()
+    {
+        return enemyUnitsFinishedMovement >= enemyUnits.Count;
     }
 
     // 유닛 선택 상태 처리
@@ -127,7 +141,7 @@ public class TurnManager : MonoBehaviour
         if (allyUnitsFinishedMovement >= allyUnits.Count)
         {
             ChangeState(TurnState.EndTurn);
-            allyUnitsFinishedMovement = 0;
+            //allyUnitsFinishedMovement = 0;
         }
         else
         {
@@ -139,7 +153,7 @@ public class TurnManager : MonoBehaviour
     // 아군 유닛의 턴이 모두 끝났는지 확인하고 턴 종료 처리
     private void CheckAllyTurnCompletion()
     {
-        if (allyUnitsFinishedMovement >= allyUnits.Count)
+        if (AreAllAlliesFinished())
         {
             Debug.Log("모든 아군의 턴이 종료되었습니다. 적군의 턴을 시작합니다.");
             allyUnitsFinishedMovement = 0; // 완료된 아군 유닛 수 초기화
@@ -154,7 +168,7 @@ public class TurnManager : MonoBehaviour
         }
         else
         {
-            NotifyUnitMovementFinished(GetSelectedUnit());
+            //NotifyUnitMovementFinished(GetSelectedUnit());
             Debug.Log("아직 턴이 완료되지 않았습니다.");
             ChangeState(TurnState.UnitSelection);
         }
@@ -163,13 +177,21 @@ public class TurnManager : MonoBehaviour
     // 적군 턴 처리
     private IEnumerator StartEnemyTurn()
     {
+        // 적군 턴이 이미 진행 중이면 중복으로 실행하지 않음
+        if (enemyTurnInProgress) yield break;
+
         Debug.Log("Enemy turn started.");
+        enemyTurnInProgress = true;
+        enemyUnitsFinishedMovement = 0;
+
         foreach (Unit enemy in enemyUnits)
         {
             yield return StartCoroutine(TakeTurn(enemy));
             yield return new WaitForSeconds(0.5f);  // 적군 이동 후 잠시 대기
         }
 
+        Debug.Log("적군 턴 종료");
+        enemyTurnInProgress = false;
         StartTurn(TurnState.UnitSelection);  // 적군 턴이 끝나면 다시 아군 유닛 선택 상태로
     }
 
@@ -185,8 +207,6 @@ public class TurnManager : MonoBehaviour
         Debug.Log($"{name}의 턴 시작");
 
         // 1. 공격 가능 범위 내에 아군이 있는지 먼저 확인
-        Debug.Log($"적군에서 공격할 유닛은 {unit.name}이고 공격 범위는 {unit.stats.attackRange} 이다.");
-
         List<Tile> attackableTiles = GridManager.Instance.FindAttackableTiles(unit.currentTile, unit.stats.attackRange);
         Unit closestAllyInRange = null;
 
@@ -223,6 +243,8 @@ public class TurnManager : MonoBehaviour
 
             // 턴 종료
             yield return new WaitForSeconds(0.5f);
+            unit.EndTurn();
+            enemyUnitsFinishedMovement++;
             Debug.Log($"{unit.name}의 턴 종료");
             yield break; // 공격 후 턴을 넘김
         }
@@ -298,7 +320,7 @@ public class TurnManager : MonoBehaviour
                 // 5. 공격 대기 및 실행
                 yield return new WaitForSeconds(0.5f);
 
-                unit.Attack(closestAlly);  // 적군이 아군을 공격
+                unit.Attack(closestAllyInRange);  // 적군이 아군을 공격
                 yield return new WaitForSeconds(0.5f);
             }
 
@@ -311,6 +333,7 @@ public class TurnManager : MonoBehaviour
 
 
 
+        enemyUnitsFinishedMovement++;
         Debug.Log($"{unit.name}의 턴 종료");
     }
 
